@@ -8,6 +8,7 @@ const admin_1 = __importDefault(require("./admin"));
 const auth_1 = __importDefault(require("./auth"));
 const roles_1 = __importDefault(require("./roles"));
 const country_1 = __importDefault(require("./country"));
+const city_1 = __importDefault(require("./city"));
 const authenticated_1 = require("../../middlewares/authenticated");
 const authorized_1 = require("../../middlewares/authorized");
 const router = (0, express_1.Router)();
@@ -16,4 +17,5 @@ router.use(authenticated_1.authenticated, (0, authorized_1.authorizeRoles)("supe
 router.use("/admin", admin_1.default);
 router.use("/roles", roles_1.default);
 router.use("/countries", country_1.default);
+router.use("/cities", city_1.default);
 exports.default = router;

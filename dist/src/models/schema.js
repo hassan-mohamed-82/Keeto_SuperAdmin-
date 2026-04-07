@@ -18,3 +18,4 @@ Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./schema/admin/admin"), exports);
 __exportStar(require("./schema/admin/roles"), exports);
 __exportStar(require("./schema/admin/country"), exports);
+__exportStar(require("./schema/admin/city"), exports);
