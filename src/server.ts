@@ -12,7 +12,6 @@ import { Server } from "socket.io";
 import { connectDB } from './models/connection';
 
 // استيراد Swagger
-import swaggerUi from "swagger-ui-express";
 import fs from "fs";
 
 dotenv.config();
@@ -58,10 +57,6 @@ app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.use(express.static(path.join(process.cwd(), "public")));
 app.use("/public", express.static(path.join(process.cwd(), "public")));
 
-// Swagger Route
-if (swaggerDocument) {
-    app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-}
 
 // Routes
 app.get("/api/test", (req, res) => {
