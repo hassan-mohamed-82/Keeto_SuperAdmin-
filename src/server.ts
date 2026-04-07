@@ -10,11 +10,13 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import http from "http";
 import { Server } from "socket.io";
-
+// أضف هذا السطر في الأعلى
+import { connectDB } from './models/connection'; // استبدل المسار بالمسار الصحيح
 
 dotenv.config();
 
 const app = express();
+connectDB(); // استدعاء دالة الاتصال بقاعدة البيانات
 
 const httpServer = http.createServer(app);
 
