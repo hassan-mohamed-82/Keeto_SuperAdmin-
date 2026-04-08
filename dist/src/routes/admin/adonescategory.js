@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const adonescategory_1 = require("../../controllers/admin/adonescategory");
+const router = (0, express_1.Router)();
+router.post("/", adonescategory_1.createAdone);
+router.get("/", adonescategory_1.getAllAdones);
+router.get("/:id", adonescategory_1.getAdoneById);
+router.put("/:id", adonescategory_1.updateAdone);
+router.delete("/:id", adonescategory_1.deleteAdone);
+router.patch("/:id/status", adonescategory_1.toggleAdoneStatus);
+exports.default = router;

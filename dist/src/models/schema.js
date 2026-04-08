@@ -23,3 +23,4 @@ __exportStar(require("./schema/admin/zone"), exports);
 __exportStar(require("./schema/admin/Cuisine "), exports);
 __exportStar(require("./schema/admin/Category"), exports);
 __exportStar(require("./schema/admin/subcategory"), exports);
+__exportStar(require("./schema/admin/adonescategory"), exports);
