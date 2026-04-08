@@ -9,7 +9,7 @@ const NotFound_1 = require("../../Errors/NotFound");
 const BadRequest_1 = require("../../Errors/BadRequest");
 const uuid_1 = require("uuid");
 const createCategory = async (req, res) => {
-    const { name, Image, meta_image, title, meta_title, status } = req.body;
+    const { name, Image, priority, meta_image, title, meta_title, status } = req.body;
     if (!name || !Image) {
         throw new BadRequest_1.BadRequest("Category name and image are required");
     }
@@ -31,6 +31,7 @@ const createCategory = async (req, res) => {
         title: title || null,
         meta_title: meta_title || null,
         status: status || "active",
+        priority: priority || "medium",
     });
     return (0, response_1.SuccessResponse)(res, { message: "Create category success", data: { id } }, 201);
 };
@@ -43,6 +44,7 @@ const getAllCategories = async (req, res) => {
         Image: schema_1.categories.Image,
         meta_image: schema_1.categories.meta_image,
         title: schema_1.categories.title,
+        priority: schema_1.categories.priority,
         meta_title: schema_1.categories.meta_title,
         status: schema_1.categories.status,
         createdAt: schema_1.categories.createdAt,
@@ -59,6 +61,7 @@ const getCategoryById = async (req, res) => {
         id: schema_1.categories.id,
         name: schema_1.categories.name,
         Image: schema_1.categories.Image,
+        priority: schema_1.categories.priority,
         meta_image: schema_1.categories.meta_image,
         title: schema_1.categories.title,
         meta_title: schema_1.categories.meta_title,
@@ -77,7 +80,7 @@ const getCategoryById = async (req, res) => {
 exports.getCategoryById = getCategoryById;
 const updateCategory = async (req, res) => {
     const { id } = req.params;
-    const { name, Image, meta_image, title, meta_title, status } = req.body;
+    const { name, Image, meta_image, title, meta_title, priority, status } = req.body;
     const existingCategory = await connection_1.db
         .select()
         .from(schema_1.categories)
@@ -93,6 +96,8 @@ const updateCategory = async (req, res) => {
         updateData.name = name;
     if (Image)
         updateData.Image = Image;
+    if (priority)
+        updateData.priority = priority;
     if (meta_image !== undefined)
         updateData.meta_image = meta_image;
     if (title !== undefined)

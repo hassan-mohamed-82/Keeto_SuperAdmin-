@@ -8,7 +8,7 @@ import { BadRequest } from "../../Errors/BadRequest";
 import { v4 as uuidv4 } from "uuid";
 
 export const createCategory = async (req: Request, res: Response) => {
-    const { name, Image, meta_image, title, meta_title, status } = req.body;
+    const { name, Image, priority, meta_image, title, meta_title, status } = req.body;
 
     if (!name || !Image) {
         throw new BadRequest("Category name and image are required");
@@ -35,6 +35,7 @@ export const createCategory = async (req: Request, res: Response) => {
         title: title || null,
         meta_title: meta_title || null,
         status: status || "active",
+        priority: priority || "medium",
     });
 
     return SuccessResponse(res, { message: "Create category success", data: { id } }, 201);
@@ -48,6 +49,7 @@ export const getAllCategories = async (req: Request, res: Response) => {
             Image: categories.Image,
             meta_image: categories.meta_image,
             title: categories.title,
+            priority: categories.priority,
             meta_title: categories.meta_title,
             status: categories.status,
             createdAt: categories.createdAt,
@@ -66,6 +68,7 @@ export const getCategoryById = async (req: Request, res: Response) => {
             id: categories.id,
             name: categories.name,
             Image: categories.Image,
+            priority: categories.priority,
             meta_image: categories.meta_image,
             title: categories.title,
             meta_title: categories.meta_title,
@@ -86,7 +89,7 @@ export const getCategoryById = async (req: Request, res: Response) => {
 
 export const updateCategory = async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { name, Image, meta_image, title, meta_title, status } = req.body;
+    const { name, Image, meta_image, title, meta_title, priority, status } = req.body;
 
     const existingCategory = await db
         .select()
@@ -104,6 +107,7 @@ export const updateCategory = async (req: Request, res: Response) => {
 
     if (name) updateData.name = name;
     if (Image) updateData.Image = Image;
+    if (priority) updateData.priority = priority;
     if (meta_image !== undefined) updateData.meta_image = meta_image;
     if (title !== undefined) updateData.title = title;
     if (meta_title !== undefined) updateData.meta_title = meta_title;

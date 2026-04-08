@@ -16,6 +16,7 @@ export const categories = mysqlTable("categories", {
     meta_image: varchar("meta_image", { length: 255 }),
     title: text("title"),
     meta_title: text("meta_title"),
+    priority: mysqlEnum("priority", ["low", "medium", "high"]).default("low"),
     status: mysqlEnum("status", ["active", "inactive"]).default("active"),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
