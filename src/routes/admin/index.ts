@@ -15,6 +15,7 @@ import FoodRouter from "./food";
 import BasiccampaignRouter from "./Basiccampaign";
 import walletsRouter from "./restaurant_wallets"
 import BussinessplanRouter from "./BusinessPlans";
+import restaurantsettingRouter from "./restaurantsetting";
 import { authenticated } from "../../middlewares/authenticated";
 import { authorizeRoles } from "../../middlewares/authorized";
 const router = Router();
@@ -37,5 +38,6 @@ router.use("/food", FoodRouter);
 router.use("/businessplans", BussinessplanRouter);
 router.use("/basiccampaign", BasiccampaignRouter);
 router.use("/wallets", walletsRouter);
+router.use("/restaurantsetting", restaurantsettingRouter);
 
 export default router;    
