@@ -1,7 +1,7 @@
 // controllers/user/CartController.ts
 import { Request, Response } from "express";
 import { db } from "../../models/connection";
-import { cartItems, food, restaurants } from "../../models/schema";
+import { cartItems, food, restaurants, variationOptions,foodVariations } from "../../models/schema";
 import { eq, and } from "drizzle-orm";
 import { SuccessResponse } from "../../utils/response";
 import { BadRequest } from "../../Errors/BadRequest";
@@ -9,60 +9,131 @@ import { v4 as uuidv4 } from "uuid";
 
 export const addToCart = async (req: Request | any, res: Response) => {
     const userId = req.user?.id;
-    const { foodId, quantity, variations } = req.body;
+    const { foodId, quantity = 1, variations = [] } = req.body;
 
-    // 1. جلب بيانات الأكلة عشان نعرف هي تبع أي مطعم
+    // 1. Get food
     const [itemFood] = await db.select().from(food).where(eq(food.id, foodId)).limit(1);
-    if (!itemFood) throw new BadRequest("The food is not found");
+    if (!itemFood) throw new BadRequest("Food not found");
 
-    // 2. 🔥 التأكد من "قاعدة المطعم الواحد"
+    // 2. Check restaurant rule
     const existingCart = await db.select().from(cartItems).where(eq(cartItems.userId, userId)).limit(1);
-    
+
     if (existingCart.length > 0 && existingCart[0].restaurantId !== itemFood.restaurantid) {
-        return res.status(409).json({ 
-            success: false, 
-            message: "You have food from another restaurant in the cart, would you like to clear the cart and start a new order from here?",
-            clearCartRequired: true 
+        return res.status(409).json({
+            success: false,
+            message: "You have food from another restaurant",
+            clearCartRequired: true
         });
     }
 
-    // 3. لو الأكلة موجودة أصلاً زود الكمية، لو مش موجودة ضيفها
-    const [alreadyInCart] = await db.select().from(cartItems)
-        .where(and(eq(cartItems.userId, userId), eq(cartItems.foodId, foodId))).limit(1);
+    // 3. Get variations from DB
+    const dbVariations = await db.select().from(foodVariations).where(eq(foodVariations.foodId, foodId));
 
-    if (alreadyInCart) {
+    let totalExtraPrice = 0;
+
+    // 🔥 VALIDATION
+    for (const v of dbVariations) {
+
+        const selectedOptions = variations.filter((x: any) => x.variationId === v.id);
+
+        // Required
+        if (v.isRequired && selectedOptions.length === 0) {
+            throw new BadRequest(`${v.name} is required`);
+        }
+
+        // Min
+        if (v.min && selectedOptions.length < v.min) {
+            throw new BadRequest(`Minimum ${v.min} required for ${v.name}`);
+        }
+
+        // Max
+        if (v.max && selectedOptions.length > v.max) {
+            throw new BadRequest(`Maximum ${v.max} allowed for ${v.name}`);
+        }
+
+        // Single
+        if (v.selectionType === "single" && selectedOptions.length > 1) {
+            throw new BadRequest(`${v.name} allows only one option`);
+        }
+
+        // Get options
+        const dbOptions = await db.select().from(variationOptions).where(eq(variationOptions.variationId, v.id));
+
+        for (const selected of selectedOptions) {
+            const found = dbOptions.find(o => o.id === selected.optionId);
+
+            if (!found) {
+                throw new BadRequest("Invalid option selected");
+            }
+
+            totalExtraPrice += Number(found.additionalPrice || 0);
+        }
+    }
+
+    // 4. Calculate price
+    const basePrice = Number(itemFood.price);
+    const unitPrice = basePrice + totalExtraPrice;
+
+    // 5. Unique key
+    const key = JSON.stringify(
+        variations.sort((a: any, b: any) => a.optionId.localeCompare(b.optionId))
+    );
+
+    const existingItems = await db.select().from(cartItems)
+        .where(and(eq(cartItems.userId, userId), eq(cartItems.foodId, foodId)));
+
+    const existingSame = existingItems.find((item: any) =>
+        JSON.stringify(item.variations) === key
+    );
+
+    if (existingSame) {
+        const newQuantity = existingSame.quantity + quantity;
+        const newTotal = unitPrice * newQuantity;
+
         await db.update(cartItems)
-            .set({ quantity: alreadyInCart.quantity + (quantity || 1) })
-            .where(eq(cartItems.id, alreadyInCart.id));
+            .set({
+                quantity: newQuantity,
+                totalPrice: newTotal.toString()
+            })
+            .where(eq(cartItems.id, existingSame.id));
     } else {
         await db.insert(cartItems).values({
             id: uuidv4(),
             userId,
             restaurantId: itemFood.restaurantid,
             foodId,
-            quantity: quantity || 1,
+            quantity,
+            unitPrice: unitPrice.toString(),
+            totalPrice: (unitPrice * quantity).toString(),
             variations
         });
     }
 
-    return SuccessResponse(res, { message: "Added to cart successfully" });
+    return SuccessResponse(res, {
+        message: "Added to cart successfully",
+        data: {
+            unitPrice,
+            totalPrice: unitPrice * quantity
+        }
+    });
 };
 
 export const getMyCart = async (req: Request | any, res: Response) => {
     const userId = req.user?.id;
 
-    const items = await db.select({
-        cartId: cartItems.id,
-        foodId: food.id,
-        name: food.name,
-        image: food.image,
-        price: food.price,
-        quantity: cartItems.quantity,
-        restaurantName: restaurants.name // جرب تعمل Join مع الـ restaurants
-    })
-    .from(cartItems)
-    .innerJoin(food, eq(cartItems.foodId, food.id))
-    .where(eq(cartItems.userId, userId));
+ const items = await db.select({
+    cartId: cartItems.id,
+    foodId: food.id,
+    name: food.name,
+    image: food.image,
+    price: food.price,
+    quantity: cartItems.quantity,
+    restaurantName: restaurants.name
+})
+.from(cartItems)
+.innerJoin(food, eq(cartItems.foodId, food.id))
+.innerJoin(restaurants, eq(cartItems.restaurantId, restaurants.id)) // ✅ الحل هنا
+.where(eq(cartItems.userId, userId));
 
     return SuccessResponse(res, { data: items });
 };

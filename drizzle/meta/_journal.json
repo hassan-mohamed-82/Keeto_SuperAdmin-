@@ -120,6 +120,20 @@
       "when": 1776000736417,
       "tag": "0016_modern_layla_miller",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "5",
+      "when": 1776070562917,
+      "tag": "0017_absent_talisman",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "5",
+      "when": 1776072110228,
+      "tag": "0018_lyrical_songbird",
+      "breakpoints": true
     }
   ]
 }
