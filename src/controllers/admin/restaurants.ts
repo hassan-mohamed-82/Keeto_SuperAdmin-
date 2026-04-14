@@ -131,83 +131,41 @@ export const createRestaurant = async (req: Request, res: Response) => {
 };
 
 export const getAllRestaurants = async (req: Request, res: Response) => {
-    const allRestaurants = await db
+    // 1. جلب البيانات ككائنات منفصلة لمنع تضارب الـ id
+    const rawRestaurants = await db
         .select({
-            id: restaurants.id,
-            name: restaurants.name,
-            address: restaurants.address,
-            cuisineId: restaurants.cuisineId,
-            zoneId: restaurants.zoneId,
-            lat: restaurants.lat,
-            lng: restaurants.lng,
-            logo: restaurants.logo,
-            cover: restaurants.cover,
-            minDeliveryTime: restaurants.minDeliveryTime,
-            maxDeliveryTime: restaurants.maxDeliveryTime,
-            deliveryTimeUnit: restaurants.deliveryTimeUnit,
-            ownerFirstName: restaurants.ownerFirstName,
-            ownerLastName: restaurants.ownerLastName,
-            ownerPhone: restaurants.ownerPhone,
-            tags: restaurants.tags,
-            taxNumber: restaurants.taxNumber,
-            taxExpireDate: restaurants.taxExpireDate,
-            taxCertificate: restaurants.taxCertificate,
-            email: restaurants.email,
-            status: restaurants.status,
-            createdAt: restaurants.createdAt,
-            updatedAt: restaurants.updatedAt,
-            cuisine: {
-                id: cuisines.id,
-                name: cuisines.name,
-            },
-            zone: {
-                id: zones.id,
-                name: zones.name,
-            },
+            restaurantObj: restaurants,
+            cuisineObj: cuisines,
+            zoneObj: zones,
         })
         .from(restaurants)
         .leftJoin(cuisines, eq(restaurants.cuisineId, cuisines.id))
         .leftJoin(zones, eq(restaurants.zoneId, zones.id));
 
-    return SuccessResponse(res, { message: "Get all restaurants success", data: allRestaurants });
+    // 2. تجميع البيانات بالشكل المتداخل الذي يتوقعه الـ Frontend
+    const formattedRestaurants = rawRestaurants.map((row) => ({
+        ...row.restaurantObj,
+        cuisine: row.cuisineObj ? { id: row.cuisineObj.id, name: row.cuisineObj.name } : null,
+        zone: row.zoneObj ? { id: row.zoneObj.id, name: row.zoneObj.name } : null,
+    }));
+
+    return SuccessResponse(res, { 
+        message: "Get all restaurants success", 
+        data: formattedRestaurants 
+    });
 };
 
+// =============================================
+// GET Restaurant By ID (مُصلح: فصل الكائنات لتجنب خطأ 500)
+// =============================================
 export const getRestaurantById = async (req: Request, res: Response) => {
     const { id } = req.params;
 
-    const restaurant = await db
+    const rawRestaurants = await db
         .select({
-            id: restaurants.id,
-            name: restaurants.name,
-            address: restaurants.address,
-            cuisineId: restaurants.cuisineId,
-            zoneId: restaurants.zoneId,
-            logo: restaurants.logo,
-            cover: restaurants.cover,
-            minDeliveryTime: restaurants.minDeliveryTime,
-            maxDeliveryTime: restaurants.maxDeliveryTime,
-            deliveryTimeUnit: restaurants.deliveryTimeUnit,
-            ownerFirstName: restaurants.ownerFirstName,
-            ownerLastName: restaurants.ownerLastName,
-            ownerPhone: restaurants.ownerPhone,
-            tags: restaurants.tags,
-            taxNumber: restaurants.taxNumber,
-            taxExpireDate: restaurants.taxExpireDate,
-            taxCertificate: restaurants.taxCertificate,
-            email: restaurants.email,
-            status: restaurants.status,
-            createdAt: restaurants.createdAt,
-            updatedAt: restaurants.updatedAt,
-            lat: restaurants.lat,
-            lng: restaurants.lng,
-            cuisine: {
-                id: cuisines.id,
-                name: cuisines.name,
-            },
-            zone: {
-                id: zones.id,
-                name: zones.name,
-            },
+            restaurantObj: restaurants,
+            cuisineObj: cuisines,
+            zoneObj: zones,
         })
         .from(restaurants)
         .leftJoin(cuisines, eq(restaurants.cuisineId, cuisines.id))
@@ -215,11 +173,22 @@ export const getRestaurantById = async (req: Request, res: Response) => {
         .where(eq(restaurants.id, id))
         .limit(1);
 
-    if (!restaurant[0]) {
+    if (!rawRestaurants[0]) {
         throw new NotFound("Restaurant not found");
     }
 
-    return SuccessResponse(res, { message: "Get restaurant by id success", data: restaurant[0] });
+    // استخراج الصف الأول وتهيئته
+    const row = rawRestaurants[0];
+    const formattedRestaurant = {
+        ...row.restaurantObj,
+        cuisine: row.cuisineObj ? { id: row.cuisineObj.id, name: row.cuisineObj.name } : null,
+        zone: row.zoneObj ? { id: row.zoneObj.id, name: row.zoneObj.name } : null,
+    };
+
+    return SuccessResponse(res, { 
+        message: "Get restaurant by id success", 
+        data: formattedRestaurant 
+    });
 };
 
 export const updateRestaurant = async (req: Request, res: Response) => {
