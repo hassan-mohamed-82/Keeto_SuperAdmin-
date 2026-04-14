@@ -187,23 +187,21 @@ export const deleteAddon = async (req: Request, res: Response) => {
 };
 
 export const getAllRestaurantsandaddonscategory = async (req: Request, res: Response) => {
-    // 1. جلب المطاعم النشطة
+
     const allRestaurants = await db
         .select({
             id: restaurants.id,
             name: restaurants.name,
+            status: restaurants.status,
         })
-        .from(restaurants)
-        .where(eq(restaurants.status, "active"));
+        .from(restaurants);
 
-    // 2. جلب الإضافات
     const allAddons = await db
         .select({
             id: adonescategory.id,
             name: adonescategory.name
         })
-        .from(adonescategory)
-        .where(eq(adonescategory.status, "active"));
+        .from(adonescategory);
 
     return SuccessResponse(res, {
         message: "Get restaurants and addons success",
