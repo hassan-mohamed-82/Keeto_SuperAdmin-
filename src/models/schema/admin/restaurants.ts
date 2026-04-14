@@ -60,7 +60,7 @@ export const restaurants = mysqlTable("restaurants", {
      
     // Status & Timestamps
     // ==========================================
-    status: mysqlEnum("status", ["active", "inactive", "pending"]).default("pending"),
+    status: mysqlEnum("status", ["active", "inactive"]).default("active"),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
 });

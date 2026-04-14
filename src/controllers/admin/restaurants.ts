@@ -91,7 +91,7 @@ export const createRestaurant = async (req: Request, res: Response) => {
             taxCertificate: taxCertificate || null,
             email,
             password: hashedPassword,
-            status: status || "pending",
+            status: status || "active",
         });
 
         // 2️⃣ Auto Create Wallet 🔥
