@@ -43,11 +43,25 @@ const decrementCuisineCount = async (cuisineId: string) => {
 };
 export const createRestaurant = async (req: Request, res: Response) => {
     const {
-        name, address, cuisineId, zoneId, logo, cover,
-        minDeliveryTime, maxDeliveryTime, deliveryTimeUnit,
-        ownerFirstName, ownerLastName, ownerPhone, tags,
-        taxNumber, taxExpireDate, taxCertificate,
-        email, password, status
+        name,
+        address,
+        cuisineId,
+        zoneId,
+        logo,
+        cover,
+        minDeliveryTime,
+        maxDeliveryTime,
+        deliveryTimeUnit,
+        ownerFirstName,
+        ownerLastName,
+        ownerPhone,
+        tags,
+        taxNumber,
+        taxExpireDate,
+        taxCertificate,
+        email,
+        password,
+        status
     } = req.body;
 
     if (!name || !address || !zoneId || !logo || !ownerFirstName || !ownerLastName || !ownerPhone || !email || !password) {
@@ -67,8 +81,13 @@ export const createRestaurant = async (req: Request, res: Response) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const id = uuidv4();
 
-    await db.transaction(async (tx) => {
+    // ✅ حل مشكلة tags (string أو array)
+    let parsedTags: string[] = [];
+    if (tags) {
+        parsedTags = typeof tags === "string" ? JSON.parse(tags) : tags;
+    }
 
+    await db.transaction(async (tx) => {
         // 1️⃣ Create Restaurant
         await tx.insert(restaurants).values({
             id,
@@ -78,23 +97,24 @@ export const createRestaurant = async (req: Request, res: Response) => {
             zoneId,
             logo,
             cover: cover || null,
-           
             minDeliveryTime: minDeliveryTime || null,
             maxDeliveryTime: maxDeliveryTime || null,
             deliveryTimeUnit: deliveryTimeUnit || "Minutes",
             ownerFirstName,
             ownerLastName,
             ownerPhone,
-            tags: tags || [],
+            tags: parsedTags,
             taxNumber: taxNumber || null,
             taxExpireDate: taxExpireDate || null,
             taxCertificate: taxCertificate || null,
             email,
             password: hashedPassword,
+
+            // ✅ مهم جدًا: مفيش pending خالص
             status: status || "active",
         });
 
-        // 2️⃣ Auto Create Wallet 🔥
+        // 2️⃣ Wallet
         await tx.insert(restaurantWallets).values({
             id: uuidv4(),
             restaurantId: id,
@@ -105,7 +125,7 @@ export const createRestaurant = async (req: Request, res: Response) => {
             totalEarning: "0.00",
         });
 
-        // 3️⃣ Increment cuisine if exists
+        // 3️⃣ Cuisine counter
         if (cuisineId) {
             const cuisine = await tx
                 .select({ total: cuisines.total_restaurants })
@@ -114,21 +134,23 @@ export const createRestaurant = async (req: Request, res: Response) => {
                 .limit(1);
 
             if (cuisine[0]) {
-                const current = parseInt(cuisine[0].total || "0");
+                const current = parseInt(cuisine[0].total || "0", 10);
+
                 await tx
                     .update(cuisines)
-                    .set({ total_restaurants: String(current + 1) })
+                    .set({
+                        total_restaurants: String(current + 1),
+                    })
                     .where(eq(cuisines.id, cuisineId));
             }
         }
     });
 
     return SuccessResponse(res, {
-        message: "Restaurant created successfully with wallet",
+        message: "Restaurant created successfully",
         data: { id }
     }, 201);
 };
-
 export const getAllRestaurants = async (req: Request, res: Response) => {
     const raw = await db.select({
         id: restaurants.id,
