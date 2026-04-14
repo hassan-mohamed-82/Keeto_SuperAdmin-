@@ -109,10 +109,40 @@ export const createFood = async (req: Request, res: Response) => {
 // =============================================
 export const getAllFoods = async (req: Request, res: Response) => {
     const rawFoods = await db.select({
-        foodObj: food,
-        restaurantObj: restaurants,
-        categoryObj: categories,
-        subcategoryObj: subcategories,
+        // ✅ Food fields
+        id: food.id,
+        name: food.name,
+        description: food.description,
+        image: food.image,
+        restaurantid: food.restaurantid,
+        categoryid: food.categoryid,
+        subcategoryid: food.subcategoryid,
+        foodtype: food.foodtype,
+        Nutrition: food.Nutrition,
+        allergen_ingredients: food.allergen_ingredients,
+        is_Halal: food.is_Halal,
+        addonsId: food.addonsId,
+        startTime: food.startTime,
+        endTime: food.endTime,
+        search_tags: food.search_tags,
+        price: food.price,
+        discount_type: food.discount_type,
+        discount_value: food.discount_value,
+        Maximum_Purchase: food.Maximum_Purchase,
+        stock_type: food.stock_type,
+        status: food.status,
+        createdAt: food.createdAt,
+        updatedAt: food.updatedAt,
+
+        // ✅ Restaurant (alias مهم)
+        restaurant_id: restaurants.id,
+        restaurant_name: restaurants.name,
+
+        // ✅ Category
+        category_name: categories.name,
+
+        // ✅ Subcategory
+        subcategory_name: subcategories.name,
     })
         .from(food)
         .leftJoin(restaurants, eq(food.restaurantid, restaurants.id))
@@ -123,33 +153,31 @@ export const getAllFoods = async (req: Request, res: Response) => {
         return SuccessResponse(res, { message: "Get all foods success", data: [] });
     }
 
-    const allFoods = rawFoods.map(row => ({
-        ...row.foodObj,
-        restaurant: row.restaurantObj ? { id: row.restaurantObj.id, name: row.restaurantObj.name } : null,
-        category: row.categoryObj ? { id: row.categoryObj.id, name: row.categoryObj.name } : null,
-        subcategory: row.subcategoryObj ? { id: row.subcategoryObj.id, name: row.subcategoryObj.name } : null,
+    // ✅ إعادة بناء الشكل
+    const allFoods = rawFoods.map(f => ({
+        id: f.id,
+        name: f.name,
+        description: f.description,
+        image: f.image,
+        price: f.price,
+
+        restaurant: f.restaurant_id
+            ? { id: f.restaurant_id, name: f.restaurant_name }
+            : null,
+
+        category: f.category_name
+            ? { name: f.category_name }
+            : null,
+
+        subcategory: f.subcategory_name
+            ? { name: f.subcategory_name }
+            : null,
     }));
 
-    const foodIds = allFoods.map(f => f.id);
-
-    const allVars = await db.select().from(foodVariations).where(inArray(foodVariations.foodId, foodIds));
-    const varIds = allVars.map(v => v.id);
-
-    const allOpts = varIds.length
-        ? await db.select().from(variationOptions).where(inArray(variationOptions.variationId, varIds))
-        : [];
-
-    const result = allFoods.map(f => {
-        const foodVars = allVars
-            .filter(v => v.foodId === f.id)
-            .map(v => ({
-                ...v,
-                options: allOpts.filter(o => o.variationId === v.id)
-            }));
-        return { ...f, variations: foodVars };
+    return SuccessResponse(res, {
+        message: "Get all foods success",
+        data: allFoods
     });
-
-    return SuccessResponse(res, { message: "Get all foods success", data: result });
 };
 
 // =============================================
