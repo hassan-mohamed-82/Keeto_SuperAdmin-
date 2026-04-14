@@ -297,3 +297,89 @@ export const deleteFood = async (req: Request, res: Response) => {
 
     return SuccessResponse(res, { message: "Delete food success" });
 };
+
+
+export const getFoodsByRestaurantId = async (req: Request, res: Response) => {
+    const { id: restaurantId } = req.params;
+
+    const foods = await db.select({
+        foodObj: food,
+        restaurantObj: restaurants,
+        categoryObj: categories,
+        subcategoryObj: subcategories,
+    })
+        .from(food)
+        .leftJoin(restaurants, eq(food.restaurantid, restaurants.id))
+        .leftJoin(categories, eq(food.categoryid, categories.id))
+        .leftJoin(subcategories, eq(food.subcategoryid, subcategories.id))
+        .where(eq(food.restaurantid, restaurantId));
+
+    if (foods.length === 0) {
+        return SuccessResponse(res, { message: "No foods found", data: [] });
+    }
+
+    const formatted = foods.map(row => ({
+        ...row.foodObj,
+        restaurant: row.restaurantObj ? { id: row.restaurantObj.id, name: row.restaurantObj.name } : null,
+        category: row.categoryObj ? { id: row.categoryObj.id, name: row.categoryObj.name } : null,
+        subcategory: row.subcategoryObj ? { id: row.subcategoryObj.id, name: row.subcategoryObj.name } : null,
+    }));
+
+    const foodIds = formatted.map(f => f.id);
+
+    const vars = await db.select().from(foodVariations).where(inArray(foodVariations.foodId, foodIds));
+    const varIds = vars.map(v => v.id);
+
+    const opts = varIds.length
+        ? await db.select().from(variationOptions).where(inArray(variationOptions.variationId, varIds))
+        : [];
+
+    const result = formatted.map(f => {
+        const foodVars = vars
+            .filter(v => v.foodId === f.id)
+            .map(v => ({
+                ...v,
+                options: opts.filter(o => o.variationId === v.id)
+            }));
+        return { ...f, variations: foodVars };
+    });
+
+    return SuccessResponse(res, { message: "Get foods by restaurant id success", data: result });
+};
+
+
+export const getFoodSelectData = async (req: Request, res: Response) => {
+    const allRestaurants = await db
+        .select({ id: restaurants.id, name: restaurants.name })
+        .from(restaurants)
+        .where(eq(restaurants.status, "active"));
+
+    const allCategories = await db
+        .select({ id: categories.id, name: categories.name })
+        .from(categories)
+        .where(eq(categories.status, "active"));
+
+    const allSubcategories = await db
+        .select({
+            id: subcategories.id,
+            name: subcategories.name,
+            categoryId: subcategories.categoryId
+        })
+        .from(subcategories)
+        .where(eq(subcategories.status, "active"));
+
+    const allAddons = await db
+        .select({ id: addons.id, name: addons.name })
+        .from(addons)
+        .where(eq(addons.status, "active"));
+
+    return SuccessResponse(res, {
+        message: "Get food select data success",
+        data: {
+            allRestaurants,
+            allCategories,
+            allSubcategories,
+            allAddons
+        }
+    });
+};
