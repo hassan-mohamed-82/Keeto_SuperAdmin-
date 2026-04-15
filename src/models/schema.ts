@@ -22,7 +22,7 @@ export * from "./schema/admin/zoneDeliveryFees";
 export * from "./schema/admin/restaurantZoneDeliveryFees";
 export * from "./schema/admin/order";
 export * from "./schema/user/Users";
-
+export * from "./schema/user/address";
 export * from "./schema/user/userWallets";
 export * from "./schema/user/emailverfication";
 export * from "./schema/user/favouriteliste";
