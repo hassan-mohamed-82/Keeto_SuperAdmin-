@@ -7,11 +7,12 @@ import {
     char,
 } from "drizzle-orm/mysql-core";
 import { sql } from "drizzle-orm";
-import { number } from "zod";
-
+import { users ,} from "./Users";
+import {zones} from "../admin/zone"
 export const addresses = mysqlTable("addresses", {
     id: char("id", { length: 36 }).primaryKey().default(sql`(UUID())`),
-    userId: char("user_id", { length: 36 }).notNull(),
+    userId: char("user_id", { length: 36 }).references(() => users.id).notNull(),
+    zoneId: char("zone_id", { length: 36 }).references(() => zones.id).notNull(),
     type: mysqlEnum("type", ["home", "work", "other"]).default("home"),
     title: varchar("title", { length: 255 }).notNull(),
     street: varchar("street", { length: 255 }).notNull(),

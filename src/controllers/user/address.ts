@@ -25,6 +25,7 @@ export const addUserAddress = async (req: Request, res: Response) => {
         title,
         street,
         number,
+        zoneId: req.body.zoneId,
         floor,
     });
 
@@ -57,8 +58,14 @@ export const updateUserAddress = async (req: Request, res: Response) => {
 
     await db
         .update(addresses)
-        .set({ type, title, street, number, floor })
+        .set({ type, title, street, number, floor, zoneId: req.body.zoneId })
         .where(eq(addresses.id, addressId));
 
     return SuccessResponse(res, { message: "Address updated successfully" });
 };
+
+export const getzone = async (req: Request, res: Response) => {
+    const zones = await db.select().from(addresses).where(eq(addresses.userId, req.user.id));
+
+    return SuccessResponse(res, { data: zones });
+}

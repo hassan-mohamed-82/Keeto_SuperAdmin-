@@ -1,8 +1,10 @@
 import { Router } from "express";
 import { catchAsync } from "../../utils/catchAsync";
-import { checkout, getOrderDetails, getUserOrders } from "../../controllers/user/order";
+import { checkout, getOrderDetails, getActiveOrders,getOrderHistory } from "../../controllers/user/order";
 const router = Router();
-router.post("/checkout", catchAsync(checkout));
-router.get("/", catchAsync(getUserOrders));
+
+router.get("/active/:userId", catchAsync(getActiveOrders));
+router.get("/history/:userId", catchAsync(getOrderHistory));
 router.get("/:orderId", catchAsync(getOrderDetails));
+router.post("/checkout", catchAsync(checkout));
 export default router;
