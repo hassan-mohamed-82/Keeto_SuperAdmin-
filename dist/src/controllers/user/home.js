@@ -122,7 +122,7 @@ exports.getRestaurantDetails = getRestaurantDetails;
 // ==========================================
 const toggleFavorite = async (req, res) => {
     // الفرونت هيبعت: نوع المفضلة، والأيدي بتاع اليوزر، والأيدي بتاع الحاجة اللي فضلها
-    const userId = req.user?.id;
+    const userId = req.user?.id || req.user?._id;
     const { restaurantId, foodId } = req.body;
     if (!restaurantId && !foodId) {
         throw new Errors_1.BadRequest("Restaurant ID or Food ID is required");
@@ -155,7 +155,7 @@ exports.toggleFavorite = toggleFavorite;
 // 6. جلب قائمة المفضلة ليوزر معين (Wishlist)
 // ==========================================
 const getUserFavorites = async (req, res) => {
-    const userId = req.user?.id; // بنجيب اليوزر آيدي من التوكن بعد ما نعمل Middleware للتحقق من التوكن
+    const userId = req.user?.id || req.user?._id;
     const favorite = await connection_1.db.select().from(schema_1.favorites).where((0, drizzle_orm_1.eq)(schema_1.favorites.userId, userId));
     return (0, response_1.SuccessResponse)(res, { data: favorite });
 };

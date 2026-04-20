@@ -140,7 +140,7 @@ export const getRestaurantDetails = async (req: Request, res: Response) => {
 // ==========================================
 export const toggleFavorite = async (req: Request, res: Response) => {
     // الفرونت هيبعت: نوع المفضلة، والأيدي بتاع اليوزر، والأيدي بتاع الحاجة اللي فضلها
-    const userId = req.user?.id;
+    const userId = req.user?.id || req.user?._id; 
     const { restaurantId, foodId } = req.body;
 
    if (!restaurantId && !foodId) {
@@ -176,7 +176,7 @@ if (restaurantId && foodId) {
 // 6. جلب قائمة المفضلة ليوزر معين (Wishlist)
 // ==========================================
 export const getUserFavorites = async (req: Request, res: Response) => {
-     const userId = req.user?.id; // بنجيب اليوزر آيدي من التوكن بعد ما نعمل Middleware للتحقق من التوكن
+     const userId = req.user?.id || req.user?._id; 
     const favorite = await db.select().from(favorites).where(eq(favorites.userId, userId));
 
     return SuccessResponse(res, { data: favorite });

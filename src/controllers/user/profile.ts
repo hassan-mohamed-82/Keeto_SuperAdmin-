@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 import { SuccessResponse } from "../../utils/response";
 
 export const getProfile = async (req: Request | any, res: Response) => {
-    const userId = req.user.id;
+    const userId = req.user?.id || req.user?._id; 
 
     const [userInfo] = await db
         .select({
@@ -50,7 +50,7 @@ export const getProfile = async (req: Request | any, res: Response) => {
     });
 };
 export const updateProfile = async (req: Request | any, res: Response) => {
-    const userId = req.user.id;
+    const userId = req.user?.id || req.user?._id; 
     const { name, phone, photo } = req.body;
 
     await db.update(users)
