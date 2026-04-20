@@ -9,9 +9,9 @@ const NotFound_1 = require("../../Errors/NotFound");
 const BadRequest_1 = require("../../Errors/BadRequest");
 const uuid_1 = require("uuid");
 const createCuisine = async (req, res) => {
-    const { name, Image, meta_image, description, meta_description, status } = req.body;
-    if (!name || !Image) {
-        throw new BadRequest_1.BadRequest("Cuisine name and image are required");
+    const { name, nameAr, nameFr, Image, meta_image, description, descriptionAr, descriptionFr, meta_description, meta_descriptionAr, meta_descriptionFr, status } = req.body;
+    if (!name || !nameAr || !nameFr || !Image || !descriptionAr || !descriptionFr || !meta_descriptionAr || !meta_descriptionFr) {
+        throw new BadRequest_1.BadRequest("Missing required fields: name, nameAr, nameFr, Image, descriptionAr, descriptionFr, meta_descriptionAr, meta_descriptionFr");
     }
     // Check if cuisine already exists
     const existingCuisine = await connection_1.db
@@ -26,10 +26,16 @@ const createCuisine = async (req, res) => {
     await connection_1.db.insert(schema_1.cuisines).values({
         id,
         name,
+        nameAr,
+        nameFr,
         Image,
         meta_image: meta_image || null,
         description: description || null,
+        descriptionAr,
+        descriptionFr,
         meta_description: meta_description || null,
+        meta_descriptionAr,
+        meta_descriptionFr,
         status: status || "active",
     });
     return (0, response_1.SuccessResponse)(res, { message: "Create cuisine success", data: { id } }, 201);
@@ -40,10 +46,16 @@ const getAllCuisines = async (req, res) => {
         .select({
         id: schema_1.cuisines.id,
         name: schema_1.cuisines.name,
+        nameAr: schema_1.cuisines.nameAr,
+        nameFr: schema_1.cuisines.nameFr,
         Image: schema_1.cuisines.Image,
         meta_image: schema_1.cuisines.meta_image,
         description: schema_1.cuisines.description,
+        descriptionAr: schema_1.cuisines.descriptionAr,
+        descriptionFr: schema_1.cuisines.descriptionFr,
         meta_description: schema_1.cuisines.meta_description,
+        meta_descriptionAr: schema_1.cuisines.meta_descriptionAr,
+        meta_descriptionFr: schema_1.cuisines.meta_descriptionFr,
         status: schema_1.cuisines.status,
         total_restaurants: schema_1.cuisines.total_restaurants,
         createdAt: schema_1.cuisines.createdAt,
@@ -59,10 +71,16 @@ const getCuisineById = async (req, res) => {
         .select({
         id: schema_1.cuisines.id,
         name: schema_1.cuisines.name,
+        nameAr: schema_1.cuisines.nameAr,
+        nameFr: schema_1.cuisines.nameFr,
         Image: schema_1.cuisines.Image,
         meta_image: schema_1.cuisines.meta_image,
         description: schema_1.cuisines.description,
+        descriptionAr: schema_1.cuisines.descriptionAr,
+        descriptionFr: schema_1.cuisines.descriptionFr,
         meta_description: schema_1.cuisines.meta_description,
+        meta_descriptionAr: schema_1.cuisines.meta_descriptionAr,
+        meta_descriptionFr: schema_1.cuisines.meta_descriptionFr,
         status: schema_1.cuisines.status,
         total_restaurants: schema_1.cuisines.total_restaurants,
         createdAt: schema_1.cuisines.createdAt,
@@ -79,7 +97,7 @@ const getCuisineById = async (req, res) => {
 exports.getCuisineById = getCuisineById;
 const updateCuisine = async (req, res) => {
     const { id } = req.params;
-    const { name, Image, meta_image, description, meta_description, status } = req.body;
+    const { name, nameAr, nameFr, Image, meta_image, description, descriptionAr, descriptionFr, meta_description, meta_descriptionAr, meta_descriptionFr, status } = req.body;
     const existingCuisine = await connection_1.db
         .select()
         .from(schema_1.cuisines)
@@ -93,14 +111,26 @@ const updateCuisine = async (req, res) => {
     };
     if (name)
         updateData.name = name;
+    if (nameAr)
+        updateData.nameAr = nameAr;
+    if (nameFr)
+        updateData.nameFr = nameFr;
     if (Image)
         updateData.Image = Image;
     if (meta_image !== undefined)
         updateData.meta_image = meta_image;
     if (description !== undefined)
         updateData.description = description;
+    if (descriptionAr)
+        updateData.descriptionAr = descriptionAr;
+    if (descriptionFr)
+        updateData.descriptionFr = descriptionFr;
     if (meta_description !== undefined)
         updateData.meta_description = meta_description;
+    if (meta_descriptionAr)
+        updateData.meta_descriptionAr = meta_descriptionAr;
+    if (meta_descriptionFr)
+        updateData.meta_descriptionFr = meta_descriptionFr;
     if (status)
         updateData.status = status;
     if (Object.keys(updateData).length === 1) {

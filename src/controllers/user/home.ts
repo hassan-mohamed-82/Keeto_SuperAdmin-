@@ -143,9 +143,13 @@ export const toggleFavorite = async (req: Request, res: Response) => {
     const userId = req.user?.id;
     const { restaurantId, foodId } = req.body;
 
-    if (restaurantId && !foodId) throw new BadRequest("Restaurant ID is required");
-    if (!restaurantId && foodId) throw new BadRequest("Food ID is required");
+   if (!restaurantId && !foodId) {
+    throw new BadRequest("Restaurant ID or Food ID is required");
+}
 
+if (restaurantId && foodId) {
+    throw new BadRequest("Send only one of restaurantId or foodId");
+}
     // بناء الشرط بناءً على النوع
     const condition = restaurantId 
         ? and(eq(favorites.userId, userId), eq(favorites.restaurantId, restaurantId))

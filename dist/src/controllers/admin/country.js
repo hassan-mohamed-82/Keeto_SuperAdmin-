@@ -9,9 +9,9 @@ const NotFound_1 = require("../../Errors/NotFound");
 const BadRequest_1 = require("../../Errors/BadRequest");
 const uuid_1 = require("uuid");
 const createCountry = async (req, res) => {
-    const { name } = req.body;
-    if (!name) {
-        throw new BadRequest_1.BadRequest("Country name is required");
+    const { name, nameAr, nameFr } = req.body;
+    if (!name || !nameAr || !nameFr) {
+        throw new BadRequest_1.BadRequest("Country name, nameAr, and nameFr are required");
     }
     const existingCountry = await connection_1.db
         .select()
@@ -25,6 +25,8 @@ const createCountry = async (req, res) => {
     await connection_1.db.insert(schema_1.countries).values({
         id,
         name,
+        nameAr,
+        nameFr,
     });
     return (0, response_1.SuccessResponse)(res, { message: "Create country success", data: { id } }, 201);
 };
@@ -49,7 +51,7 @@ const getCountryById = async (req, res) => {
 exports.getCountryById = getCountryById;
 const updateCountry = async (req, res) => {
     const { id } = req.params;
-    const { name, status } = req.body;
+    const { name, nameAr, nameFr, status } = req.body;
     const existingCountry = await connection_1.db
         .select()
         .from(schema_1.countries)
@@ -63,6 +65,10 @@ const updateCountry = async (req, res) => {
     };
     if (name)
         updateData.name = name;
+    if (nameAr)
+        updateData.nameAr = nameAr;
+    if (nameFr)
+        updateData.nameFr = nameFr;
     if (status)
         updateData.status = status;
     if (Object.keys(updateData).length === 1) {

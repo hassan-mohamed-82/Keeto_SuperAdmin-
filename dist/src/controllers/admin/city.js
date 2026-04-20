@@ -9,9 +9,9 @@ const NotFound_1 = require("../../Errors/NotFound");
 const BadRequest_1 = require("../../Errors/BadRequest");
 const uuid_1 = require("uuid");
 const createCity = async (req, res) => {
-    const { name, countryId } = req.body;
-    if (!name || !countryId) {
-        throw new BadRequest_1.BadRequest("City name and country ID are required");
+    const { name, nameAr, nameFr, countryId } = req.body;
+    if (!name || !nameAr || !nameFr || !countryId) {
+        throw new BadRequest_1.BadRequest("City name, nameAr, nameFr, and country ID are required");
     }
     // Check if country exists
     const existingCountry = await connection_1.db
@@ -35,6 +35,8 @@ const createCity = async (req, res) => {
     await connection_1.db.insert(schema_1.cities).values({
         id,
         name,
+        nameAr,
+        nameFr,
         countryId,
     });
     return (0, response_1.SuccessResponse)(res, { message: "Create city success", data: { id } }, 201);
@@ -45,6 +47,8 @@ const getAllCities = async (req, res) => {
         .select({
         id: schema_1.cities.id,
         name: schema_1.cities.name,
+        nameAr: schema_1.cities.nameAr,
+        nameFr: schema_1.cities.nameFr,
         status: schema_1.cities.status,
         countryId: schema_1.cities.countryId,
         createdAt: schema_1.cities.createdAt,
@@ -52,6 +56,8 @@ const getAllCities = async (req, res) => {
         country: {
             id: schema_1.countries.id,
             name: schema_1.countries.name,
+            nameAr: schema_1.countries.nameAr,
+            nameFr: schema_1.countries.nameFr,
             status: schema_1.countries.status,
         },
     })
@@ -66,6 +72,8 @@ const getCityById = async (req, res) => {
         .select({
         id: schema_1.cities.id,
         name: schema_1.cities.name,
+        nameAr: schema_1.cities.nameAr,
+        nameFr: schema_1.cities.nameFr,
         status: schema_1.cities.status,
         countryId: schema_1.cities.countryId,
         createdAt: schema_1.cities.createdAt,
@@ -73,6 +81,8 @@ const getCityById = async (req, res) => {
         country: {
             id: schema_1.countries.id,
             name: schema_1.countries.name,
+            nameAr: schema_1.countries.nameAr,
+            nameFr: schema_1.countries.nameFr,
             status: schema_1.countries.status,
         },
     })
@@ -88,7 +98,7 @@ const getCityById = async (req, res) => {
 exports.getCityById = getCityById;
 const updateCity = async (req, res) => {
     const { id } = req.params;
-    const { name, status, countryId } = req.body;
+    const { name, nameAr, nameFr, status, countryId } = req.body;
     const existingCity = await connection_1.db
         .select()
         .from(schema_1.cities)
@@ -113,6 +123,10 @@ const updateCity = async (req, res) => {
     };
     if (name)
         updateData.name = name;
+    if (nameAr)
+        updateData.nameAr = nameAr;
+    if (nameFr)
+        updateData.nameFr = nameFr;
     if (status)
         updateData.status = status;
     if (countryId)

@@ -9,9 +9,9 @@ const NotFound_1 = require("../../Errors/NotFound");
 const BadRequest_1 = require("../../Errors/BadRequest");
 const uuid_1 = require("uuid");
 const createSubcategory = async (req, res) => {
-    const { name, categoryId, priority, status } = req.body;
-    if (!name || !categoryId) {
-        throw new BadRequest_1.BadRequest("Subcategory name and category ID are required");
+    const { name, nameAr, nameFr, categoryId, priority, status } = req.body;
+    if (!name || !nameAr || !nameFr || !categoryId) {
+        throw new BadRequest_1.BadRequest("Subcategory name, nameAr, nameFr, and category ID are required");
     }
     // Check if category exists
     const existingCategory = await connection_1.db
@@ -35,6 +35,8 @@ const createSubcategory = async (req, res) => {
     await connection_1.db.insert(schema_1.subcategories).values({
         id,
         name,
+        nameAr,
+        nameFr,
         categoryId,
         priority: priority || "low",
         status: status || "active",
@@ -47,6 +49,8 @@ const getAllSubcategories = async (req, res) => {
         .select({
         id: schema_1.subcategories.id,
         name: schema_1.subcategories.name,
+        nameAr: schema_1.subcategories.nameAr,
+        nameFr: schema_1.subcategories.nameFr,
         categoryId: schema_1.subcategories.categoryId,
         priority: schema_1.subcategories.priority,
         status: schema_1.subcategories.status,
@@ -55,6 +59,8 @@ const getAllSubcategories = async (req, res) => {
         category: {
             id: schema_1.categories.id,
             name: schema_1.categories.name,
+            nameAr: schema_1.categories.nameAr,
+            nameFr: schema_1.categories.nameFr,
             status: schema_1.categories.status,
         },
     })
@@ -69,6 +75,8 @@ const getSubcategoryById = async (req, res) => {
         .select({
         id: schema_1.subcategories.id,
         name: schema_1.subcategories.name,
+        nameAr: schema_1.subcategories.nameAr,
+        nameFr: schema_1.subcategories.nameFr,
         categoryId: schema_1.subcategories.categoryId,
         priority: schema_1.subcategories.priority,
         status: schema_1.subcategories.status,
@@ -77,6 +85,8 @@ const getSubcategoryById = async (req, res) => {
         category: {
             id: schema_1.categories.id,
             name: schema_1.categories.name,
+            nameAr: schema_1.categories.nameAr,
+            nameFr: schema_1.categories.nameFr,
             status: schema_1.categories.status,
         },
     })
@@ -92,7 +102,7 @@ const getSubcategoryById = async (req, res) => {
 exports.getSubcategoryById = getSubcategoryById;
 const updateSubcategory = async (req, res) => {
     const { id } = req.params;
-    const { name, categoryId, priority, status } = req.body;
+    const { name, nameAr, nameFr, categoryId, priority, status } = req.body;
     const existingSubcategory = await connection_1.db
         .select()
         .from(schema_1.subcategories)
@@ -117,6 +127,10 @@ const updateSubcategory = async (req, res) => {
     };
     if (name)
         updateData.name = name;
+    if (nameAr)
+        updateData.nameAr = nameAr;
+    if (nameFr)
+        updateData.nameFr = nameFr;
     if (categoryId)
         updateData.categoryId = categoryId;
     if (priority)

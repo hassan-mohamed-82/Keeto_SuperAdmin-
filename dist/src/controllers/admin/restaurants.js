@@ -43,158 +43,147 @@ const decrementCuisineCount = async (cuisineId) => {
     }
 };
 const createRestaurant = async (req, res) => {
-    const { name, address, cuisineId, zoneId, logo, cover, minDeliveryTime, maxDeliveryTime, deliveryTimeUnit, ownerFirstName, ownerLastName, ownerPhone, tags, taxNumber, taxExpireDate, taxCertificate, email, password, status, } = req.body;
-    // Required fields validation
-    if (!name || !address || !zoneId || !logo || !ownerFirstName || !ownerLastName || !ownerPhone || !email || !password) {
-        throw new BadRequest_1.BadRequest("Missing required fields: name, address, zoneId, logo, ownerFirstName, ownerLastName, ownerPhone, email, password");
+    const clean = (v) => typeof v === "string" ? v.trim() : v;
+    const { name, nameAr, nameFr, address, addressAr, addressFr, cuisineId, zoneId, logo, cover, minDeliveryTime, maxDeliveryTime, deliveryTimeUnit, ownerFirstName, ownerLastName, ownerPhone, tags, taxNumber, taxExpireDate, taxCertificate, email, password, status } = req.body;
+    if (!name || !nameAr || !nameFr || !address || !addressAr || !addressFr || !zoneId || !logo || !ownerFirstName || !ownerLastName || !ownerPhone || !email || !password) {
+        throw new BadRequest_1.BadRequest("Missing required fields");
     }
-    // Check if email already exists
-    const existingRestaurant = await connection_1.db
+    const existing = await connection_1.db
         .select()
         .from(schema_1.restaurants)
         .where((0, drizzle_orm_1.eq)(schema_1.restaurants.email, email))
         .limit(1);
-    if (existingRestaurant[0]) {
+    if (existing[0]) {
         throw new BadRequest_1.BadRequest("Email already exists");
     }
-    // Validate zone exists
-    const existingZone = await connection_1.db
-        .select()
-        .from(schema_1.zones)
-        .where((0, drizzle_orm_1.eq)(schema_1.zones.id, zoneId))
-        .limit(1);
-    if (!existingZone[0]) {
-        throw new BadRequest_1.BadRequest("Zone not found");
-    }
-    // Validate cuisine exists if provided
-    if (cuisineId) {
-        const existingCuisine = await connection_1.db
-            .select()
-            .from(schema_1.cuisines)
-            .where((0, drizzle_orm_1.eq)(schema_1.cuisines.id, cuisineId))
-            .limit(1);
-        if (!existingCuisine[0]) {
-            throw new BadRequest_1.BadRequest("Cuisine not found");
-        }
-    }
-    const id = (0, uuid_1.v4)();
     const hashedPassword = await bcrypt_1.default.hash(password, 10);
-    await connection_1.db.insert(schema_1.restaurants).values({
-        id,
-        name,
-        address,
-        cuisineId: cuisineId || null,
-        zoneId,
-        logo,
-        cover: cover || null,
-        minDeliveryTime: minDeliveryTime || null,
-        maxDeliveryTime: maxDeliveryTime || null,
-        deliveryTimeUnit: deliveryTimeUnit || "Minutes",
-        ownerFirstName,
-        ownerLastName,
-        ownerPhone,
-        tags: tags || [],
-        taxNumber: taxNumber || null,
-        taxExpireDate: taxExpireDate || null,
-        taxCertificate: taxCertificate || null,
-        email,
-        password: hashedPassword,
-        status: status || "pending",
-    });
-    // Increment total_restaurants on the selected cuisine
-    if (cuisineId) {
-        await incrementCuisineCount(cuisineId);
+    const id = (0, uuid_1.v4)();
+    let parsedTags = [];
+    if (tags) {
+        parsedTags = typeof tags === "string" ? JSON.parse(tags) : tags;
     }
-    return (0, response_1.SuccessResponse)(res, { message: "Create restaurant success", data: { id } }, 201);
+    await connection_1.db.transaction(async (tx) => {
+        await tx.insert(schema_1.restaurants).values({
+            id,
+            name: clean(name),
+            nameAr: clean(nameAr),
+            nameFr: clean(nameFr),
+            address: clean(address),
+            addressAr: clean(addressAr),
+            addressFr: clean(addressFr),
+            cuisineId: cuisineId || null,
+            zoneId: clean(zoneId),
+            logo: clean(logo),
+            cover: cover ? clean(cover) : null,
+            minDeliveryTime: minDeliveryTime ? clean(minDeliveryTime) : null,
+            maxDeliveryTime: maxDeliveryTime ? clean(maxDeliveryTime) : null,
+            deliveryTimeUnit: deliveryTimeUnit || "Minutes",
+            ownerFirstName: clean(ownerFirstName),
+            ownerLastName: clean(ownerLastName),
+            ownerPhone: clean(ownerPhone),
+            tags: parsedTags,
+            taxNumber: taxNumber ? clean(taxNumber) : null,
+            taxExpireDate: taxExpireDate || null,
+            taxCertificate: taxCertificate ? clean(taxCertificate) : null,
+            email: clean(email),
+            password: hashedPassword,
+            status: "active",
+        });
+        await tx.insert(schema_1.restaurantWallets).values({
+            id: (0, uuid_1.v4)(),
+            restaurantId: id,
+            balance: "0.00",
+            collectedCash: "0.00",
+            pendingWithdraw: "0.00",
+            totalWithdrawn: "0.00",
+            totalEarning: "0.00",
+        });
+    });
+    return (0, response_1.SuccessResponse)(res, {
+        message: "Restaurant created successfully",
+        data: { id }
+    }, 201);
 };
 exports.createRestaurant = createRestaurant;
 const getAllRestaurants = async (req, res) => {
-    const allRestaurants = await connection_1.db
-        .select({
+    const raw = await connection_1.db.select({
         id: schema_1.restaurants.id,
         name: schema_1.restaurants.name,
+        nameAr: schema_1.restaurants.nameAr,
+        nameFr: schema_1.restaurants.nameFr,
         address: schema_1.restaurants.address,
-        cuisineId: schema_1.restaurants.cuisineId,
-        zoneId: schema_1.restaurants.zoneId,
+        addressAr: schema_1.restaurants.addressAr,
+        addressFr: schema_1.restaurants.addressFr,
         logo: schema_1.restaurants.logo,
         cover: schema_1.restaurants.cover,
-        minDeliveryTime: schema_1.restaurants.minDeliveryTime,
-        maxDeliveryTime: schema_1.restaurants.maxDeliveryTime,
-        deliveryTimeUnit: schema_1.restaurants.deliveryTimeUnit,
-        ownerFirstName: schema_1.restaurants.ownerFirstName,
-        ownerLastName: schema_1.restaurants.ownerLastName,
-        ownerPhone: schema_1.restaurants.ownerPhone,
-        tags: schema_1.restaurants.tags,
-        taxNumber: schema_1.restaurants.taxNumber,
-        taxExpireDate: schema_1.restaurants.taxExpireDate,
-        taxCertificate: schema_1.restaurants.taxCertificate,
-        email: schema_1.restaurants.email,
         status: schema_1.restaurants.status,
-        createdAt: schema_1.restaurants.createdAt,
-        updatedAt: schema_1.restaurants.updatedAt,
-        cuisine: {
-            id: schema_1.cuisines.id,
-            name: schema_1.cuisines.name,
-        },
-        zone: {
-            id: schema_1.zones.id,
-            name: schema_1.zones.name,
-        },
+        cuisine_id: schema_1.cuisines.id,
+        cuisine_name: schema_1.cuisines.name,
+        zone_id: schema_1.zones.id,
+        zone_name: schema_1.zones.name,
     })
         .from(schema_1.restaurants)
         .leftJoin(schema_1.cuisines, (0, drizzle_orm_1.eq)(schema_1.restaurants.cuisineId, schema_1.cuisines.id))
         .leftJoin(schema_1.zones, (0, drizzle_orm_1.eq)(schema_1.restaurants.zoneId, schema_1.zones.id));
-    return (0, response_1.SuccessResponse)(res, { message: "Get all restaurants success", data: allRestaurants });
+    const formatted = raw.map(r => ({
+        id: r.id,
+        name: r.name,
+        nameAr: r.nameAr,
+        nameFr: r.nameFr,
+        address: r.address,
+        addressAr: r.addressAr,
+        addressFr: r.addressFr,
+        logo: r.logo,
+        cover: r.cover,
+        status: r.status,
+        cuisine: r.cuisine_id
+            ? { id: r.cuisine_id, name: r.cuisine_name }
+            : null,
+        zone: r.zone_id
+            ? { id: r.zone_id, name: r.zone_name }
+            : null,
+    }));
+    return (0, response_1.SuccessResponse)(res, {
+        message: "Get all restaurants success",
+        data: formatted
+    });
 };
 exports.getAllRestaurants = getAllRestaurants;
+// =============================================
+// GET Restaurant By ID (مُصلح: فصل الكائنات لتجنب خطأ 500)
+// =============================================
 const getRestaurantById = async (req, res) => {
     const { id } = req.params;
-    const restaurant = await connection_1.db
+    const rawRestaurants = await connection_1.db
         .select({
-        id: schema_1.restaurants.id,
-        name: schema_1.restaurants.name,
-        address: schema_1.restaurants.address,
-        cuisineId: schema_1.restaurants.cuisineId,
-        zoneId: schema_1.restaurants.zoneId,
-        logo: schema_1.restaurants.logo,
-        cover: schema_1.restaurants.cover,
-        minDeliveryTime: schema_1.restaurants.minDeliveryTime,
-        maxDeliveryTime: schema_1.restaurants.maxDeliveryTime,
-        deliveryTimeUnit: schema_1.restaurants.deliveryTimeUnit,
-        ownerFirstName: schema_1.restaurants.ownerFirstName,
-        ownerLastName: schema_1.restaurants.ownerLastName,
-        ownerPhone: schema_1.restaurants.ownerPhone,
-        tags: schema_1.restaurants.tags,
-        taxNumber: schema_1.restaurants.taxNumber,
-        taxExpireDate: schema_1.restaurants.taxExpireDate,
-        taxCertificate: schema_1.restaurants.taxCertificate,
-        email: schema_1.restaurants.email,
-        status: schema_1.restaurants.status,
-        createdAt: schema_1.restaurants.createdAt,
-        updatedAt: schema_1.restaurants.updatedAt,
-        cuisine: {
-            id: schema_1.cuisines.id,
-            name: schema_1.cuisines.name,
-        },
-        zone: {
-            id: schema_1.zones.id,
-            name: schema_1.zones.name,
-        },
+        restaurantObj: schema_1.restaurants,
+        cuisineObj: schema_1.cuisines,
+        zoneObj: schema_1.zones,
     })
         .from(schema_1.restaurants)
         .leftJoin(schema_1.cuisines, (0, drizzle_orm_1.eq)(schema_1.restaurants.cuisineId, schema_1.cuisines.id))
         .leftJoin(schema_1.zones, (0, drizzle_orm_1.eq)(schema_1.restaurants.zoneId, schema_1.zones.id))
         .where((0, drizzle_orm_1.eq)(schema_1.restaurants.id, id))
         .limit(1);
-    if (!restaurant[0]) {
+    if (!rawRestaurants[0]) {
         throw new NotFound_1.NotFound("Restaurant not found");
     }
-    return (0, response_1.SuccessResponse)(res, { message: "Get restaurant by id success", data: restaurant[0] });
+    // استخراج الصف الأول وتهيئته
+    const row = rawRestaurants[0];
+    const formattedRestaurant = {
+        ...row.restaurantObj,
+        cuisine: row.cuisineObj ? { id: row.cuisineObj.id, name: row.cuisineObj.name } : null,
+        zone: row.zoneObj ? { id: row.zoneObj.id, name: row.zoneObj.name } : null,
+    };
+    return (0, response_1.SuccessResponse)(res, {
+        message: "Get restaurant by id success",
+        data: formattedRestaurant
+    });
 };
 exports.getRestaurantById = getRestaurantById;
 const updateRestaurant = async (req, res) => {
     const { id } = req.params;
-    const { name, address, cuisineId, zoneId, lat, lng, logo, cover, minDeliveryTime, maxDeliveryTime, deliveryTimeUnit, ownerFirstName, ownerLastName, ownerPhone, tags, taxNumber, taxExpireDate, taxCertificate, email, password, confirmPassword, status, } = req.body;
+    const { name, nameAr, nameFr, address, addressAr, addressFr, cuisineId, zoneId, lat, lng, logo, cover, minDeliveryTime, maxDeliveryTime, deliveryTimeUnit, ownerFirstName, ownerLastName, ownerPhone, tags, taxNumber, taxExpireDate, taxCertificate, email, password, confirmPassword, status } = req.body;
     const existingRestaurant = await connection_1.db
         .select()
         .from(schema_1.restaurants)
@@ -247,8 +236,16 @@ const updateRestaurant = async (req, res) => {
     };
     if (name)
         updateData.name = name;
+    if (nameAr)
+        updateData.nameAr = nameAr;
+    if (nameFr)
+        updateData.nameFr = nameFr;
     if (address)
         updateData.address = address;
+    if (addressAr)
+        updateData.addressAr = addressAr;
+    if (addressFr)
+        updateData.addressFr = addressFr;
     if (cuisineId !== undefined)
         updateData.cuisineId = cuisineId || null;
     if (zoneId)

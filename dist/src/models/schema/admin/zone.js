@@ -7,7 +7,11 @@ const city_1 = require("./city");
 exports.zones = (0, mysql_core_1.mysqlTable)("zones", {
     id: (0, mysql_core_1.char)("id", { length: 36 }).primaryKey().default((0, drizzle_orm_1.sql) `(UUID())`),
     name: (0, mysql_core_1.varchar)("name", { length: 255 }).notNull(),
+    nameAr: (0, mysql_core_1.varchar)("name_ar", { length: 255 }).notNull().default(''),
+    nameFr: (0, mysql_core_1.varchar)("name_fr", { length: 255 }).notNull().default(''),
     displayName: (0, mysql_core_1.varchar)("displayName", { length: 255 }).notNull(),
+    displayNameAr: (0, mysql_core_1.varchar)("displayName_ar", { length: 255 }).notNull().default(''),
+    displayNameFr: (0, mysql_core_1.varchar)("displayName_fr", { length: 255 }).notNull().default(''),
     lat: (0, mysql_core_1.varchar)("lat", { length: 255 }).notNull(),
     lng: (0, mysql_core_1.varchar)("lng", { length: 255 }).notNull(),
     status: (0, mysql_core_1.mysqlEnum)("status", ["active", "inactive"]).default("active"),

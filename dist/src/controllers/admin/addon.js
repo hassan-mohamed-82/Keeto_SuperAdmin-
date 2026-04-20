@@ -9,10 +9,10 @@ const NotFound_1 = require("../../Errors/NotFound");
 const BadRequest_1 = require("../../Errors/BadRequest");
 const uuid_1 = require("uuid");
 const createAddon = async (req, res) => {
-    const { name, price, stock_type, adonescategoryid, restaurantid } = req.body;
+    const { name, nameAr, nameFr, price, stock_type, adonescategoryid, restaurantid } = req.body;
     // Required fields validation
-    if (!name || !price || !stock_type || !adonescategoryid || !restaurantid) {
-        throw new BadRequest_1.BadRequest("Missing required fields: name, price, stock_type, adonescategoryid, restaurantid");
+    if (!name || !nameAr || !nameFr || !price || !stock_type || !adonescategoryid || !restaurantid) {
+        throw new BadRequest_1.BadRequest("Missing required fields: name, nameAr, nameFr, price, stock_type, adonescategoryid, restaurantid");
     }
     // Validate adonescategory exists
     const existingAdonesCategory = await connection_1.db
@@ -36,6 +36,8 @@ const createAddon = async (req, res) => {
     await connection_1.db.insert(schema_1.addons).values({
         id,
         name,
+        nameAr,
+        nameFr,
         price,
         stock_type,
         adonescategoryid,
@@ -49,6 +51,8 @@ const getAllAddons = async (req, res) => {
         .select({
         id: schema_1.addons.id,
         name: schema_1.addons.name,
+        nameAr: schema_1.addons.nameAr,
+        nameFr: schema_1.addons.nameFr,
         price: schema_1.addons.price,
         stock_type: schema_1.addons.stock_type,
         adonescategoryid: schema_1.addons.adonescategoryid,
@@ -58,10 +62,14 @@ const getAllAddons = async (req, res) => {
         adonescategory: {
             id: schema_1.adonescategory.id,
             name: schema_1.adonescategory.name,
+            nameAr: schema_1.adonescategory.nameAr,
+            nameFr: schema_1.adonescategory.nameFr,
         },
         restaurant: {
             id: schema_1.restaurants.id,
             name: schema_1.restaurants.name,
+            nameAr: schema_1.restaurants.nameAr,
+            nameFr: schema_1.restaurants.nameFr,
         },
     })
         .from(schema_1.addons)
@@ -76,6 +84,8 @@ const getAddonById = async (req, res) => {
         .select({
         id: schema_1.addons.id,
         name: schema_1.addons.name,
+        nameAr: schema_1.addons.nameAr,
+        nameFr: schema_1.addons.nameFr,
         price: schema_1.addons.price,
         stock_type: schema_1.addons.stock_type,
         adonescategoryid: schema_1.addons.adonescategoryid,
@@ -85,10 +95,14 @@ const getAddonById = async (req, res) => {
         adonescategory: {
             id: schema_1.adonescategory.id,
             name: schema_1.adonescategory.name,
+            nameAr: schema_1.adonescategory.nameAr,
+            nameFr: schema_1.adonescategory.nameFr,
         },
         restaurant: {
             id: schema_1.restaurants.id,
             name: schema_1.restaurants.name,
+            nameAr: schema_1.restaurants.nameAr,
+            nameFr: schema_1.restaurants.nameFr,
         },
     })
         .from(schema_1.addons)
@@ -104,7 +118,7 @@ const getAddonById = async (req, res) => {
 exports.getAddonById = getAddonById;
 const updateAddon = async (req, res) => {
     const { id } = req.params;
-    const { name, price, stock_type, stock, adonescategoryid, restaurantid } = req.body;
+    const { name, nameAr, nameFr, price, stock_type, stock, adonescategoryid, restaurantid } = req.body;
     // Validate addon exists
     const existingAddon = await connection_1.db
         .select()
@@ -140,6 +154,8 @@ const updateAddon = async (req, res) => {
         .update(schema_1.addons)
         .set({
         name: name || existingAddon[0].name,
+        nameAr: nameAr || existingAddon[0].nameAr,
+        nameFr: nameFr || existingAddon[0].nameFr,
         price: price || existingAddon[0].price,
         stock_type: stock_type || existingAddon[0].stock_type,
         adonescategoryid: adonescategoryid || existingAddon[0].adonescategoryid,
@@ -164,25 +180,25 @@ const deleteAddon = async (req, res) => {
 };
 exports.deleteAddon = deleteAddon;
 const getAllRestaurantsandaddonscategory = async (req, res) => {
-    // 1. جلب المطاعم النشطة
     const allRestaurants = await connection_1.db
         .select({
         id: schema_1.restaurants.id,
         name: schema_1.restaurants.name,
+        status: schema_1.restaurants.status,
     })
-        .from(schema_1.restaurants)
-        .where((0, drizzle_orm_1.eq)(schema_1.restaurants.status, "active"));
-    // 2. جلب الإضافات (بشرط الإضافة نفسها تكون نشطة)
+        .from(schema_1.restaurants);
     const allAddons = await connection_1.db
         .select({
         id: schema_1.adonescategory.id,
         name: schema_1.adonescategory.name
     })
-        .from(schema_1.adonescategory)
-        .where((0, drizzle_orm_1.eq)(schema_1.adonescategory.status, "active")); // فلتر فقط بحالة الإضافة مؤقتاً للتأكد من الداتا
+        .from(schema_1.adonescategory);
     return (0, response_1.SuccessResponse)(res, {
-        allRestaurants,
-        allAddons
+        message: "Get restaurants and addons success",
+        data: {
+            allRestaurants,
+            allAddons
+        }
     }, 200);
 };
 exports.getAllRestaurantsandaddonscategory = getAllRestaurantsandaddonscategory;

@@ -12,7 +12,11 @@ exports.restaurants = (0, mysql_core_1.mysqlTable)("restaurants", {
     // 1. Restaurant Info & Location (الصورة الأولى)
     // ==========================================
     name: (0, mysql_core_1.varchar)("name", { length: 255 }).notNull(),
+    nameAr: (0, mysql_core_1.varchar)("name_ar", { length: 255 }).notNull().default(''),
+    nameFr: (0, mysql_core_1.varchar)("name_fr", { length: 255 }).notNull().default(''),
     address: (0, mysql_core_1.text)("address").notNull(),
+    addressAr: (0, mysql_core_1.text)("address_ar").notNull().default(''),
+    addressFr: (0, mysql_core_1.text)("address_fr").notNull().default(''),
     // العلاقات (Relations)
     cuisineId: (0, mysql_core_1.char)("cuisine_id", { length: 36 }).references(() => Cuisine_1.cuisines.id),
     zoneId: (0, mysql_core_1.char)("zone_id", { length: 36 }).references(() => zone_1.zones.id).notNull(),
@@ -41,10 +45,10 @@ exports.restaurants = (0, mysql_core_1.mysqlTable)("restaurants", {
     email: (0, mysql_core_1.varchar)("email", { length: 255 }).notNull().unique(),
     password: (0, mysql_core_1.varchar)("password", { length: 255 }).notNull(),
     // 💡 ملاحظة: حقل Confirm Password مش بيتسجل في الداتابيز، ده بيكون Validation في الـ Controller بس
-    // ==========================================
+    type: (0, mysql_core_1.mysqlEnum)("type", ["restaurantadmin", "superadmin"]).default("restaurantadmin"),
     // Status & Timestamps
     // ==========================================
-    status: (0, mysql_core_1.mysqlEnum)("status", ["active", "inactive", "pending"]).default("pending"),
+    status: (0, mysql_core_1.mysqlEnum)("status", ["active", "inactive"]).default("active"),
     createdAt: (0, mysql_core_1.timestamp)("created_at").defaultNow(),
     updatedAt: (0, mysql_core_1.timestamp)("updated_at").defaultNow().onUpdateNow(),
 });

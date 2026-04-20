@@ -9,9 +9,9 @@ const NotFound_1 = require("../../Errors/NotFound");
 const BadRequest_1 = require("../../Errors/BadRequest");
 const uuid_1 = require("uuid");
 const createAdone = async (req, res) => {
-    const { name, status } = req.body;
-    if (!name) {
-        throw new BadRequest_1.BadRequest("Adone name is required");
+    const { name, nameAr, nameFr, status } = req.body;
+    if (!name || !nameAr || !nameFr) {
+        throw new BadRequest_1.BadRequest("Adone name, nameAr, and nameFr are required");
     }
     const existingAdone = await connection_1.db
         .select()
@@ -24,6 +24,8 @@ const createAdone = async (req, res) => {
     await connection_1.db.insert(schema_1.adonescategory).values({
         id,
         name,
+        nameAr,
+        nameFr,
         status: status || "active",
     });
     return (0, response_1.SuccessResponse)(res, { message: "create adone success", data: { id } });
@@ -34,6 +36,8 @@ const getAllAdones = async (req, res) => {
         .select({
         id: schema_1.adonescategory.id,
         name: schema_1.adonescategory.name,
+        nameAr: schema_1.adonescategory.nameAr,
+        nameFr: schema_1.adonescategory.nameFr,
         status: schema_1.adonescategory.status,
         createdAt: schema_1.adonescategory.createdAt,
         updatedAt: schema_1.adonescategory.updatedAt,
@@ -48,6 +52,8 @@ const getAdoneById = async (req, res) => {
         .select({
         id: schema_1.adonescategory.id,
         name: schema_1.adonescategory.name,
+        nameAr: schema_1.adonescategory.nameAr,
+        nameFr: schema_1.adonescategory.nameFr,
         status: schema_1.adonescategory.status,
         createdAt: schema_1.adonescategory.createdAt,
         updatedAt: schema_1.adonescategory.updatedAt,
@@ -62,7 +68,7 @@ const getAdoneById = async (req, res) => {
 exports.getAdoneById = getAdoneById;
 const updateAdone = async (req, res) => {
     const { id } = req.params;
-    const { name, status } = req.body;
+    const { name, nameAr, nameFr, status } = req.body;
     const existingAdone = await connection_1.db
         .select()
         .from(schema_1.adonescategory)
@@ -75,6 +81,10 @@ const updateAdone = async (req, res) => {
     };
     if (name)
         updateData.name = name;
+    if (nameAr)
+        updateData.nameAr = nameAr;
+    if (nameFr)
+        updateData.nameFr = nameFr;
     if (status)
         updateData.status = status;
     if (Object.keys(updateData).length === 1) {

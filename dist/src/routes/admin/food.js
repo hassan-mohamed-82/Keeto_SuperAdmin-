@@ -5,6 +5,7 @@ const catchAsync_1 = require("../../utils/catchAsync");
 const food_1 = require("../../controllers/admin/food");
 const router = (0, express_1.Router)();
 router.get("/select", (0, catchAsync_1.catchAsync)(food_1.getFoodSelectData));
+router.get("/restaurant/:id", (0, catchAsync_1.catchAsync)(food_1.getFoodsByRestaurantId));
 router.post("/", (0, catchAsync_1.catchAsync)(food_1.createFood));
 router.get("/", (0, catchAsync_1.catchAsync)(food_1.getAllFoods));
 router.get("/:id", (0, catchAsync_1.catchAsync)(food_1.getFoodById));
