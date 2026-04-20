@@ -16,7 +16,7 @@ const Errors_1 = require("../../Errors");
 const checkout = async (req, res) => {
     if (!req.user)
         throw new Errors_1.UnauthorizedError("Unauthenticated");
-    const userId = req.user?.id || req.user?._id;
+    const userId = req.user.id;
     const { orderSource, paymentMethodId, orderType, idempotencyKey, userZoneId, branchId } = req.body;
     // 1. Idempotency Check
     if (idempotencyKey) {
@@ -155,7 +155,7 @@ exports.checkout = checkout;
 const getActiveOrders = async (req, res) => {
     if (!req.user)
         throw new Errors_1.UnauthorizedError("Unauthenticated");
-    const userId = req.user?.id || req.user?._id;
+    const userId = req.user.id;
     const activeOrders = await connection_1.db
         .select({
         orderId: schema_1.orders.id,
@@ -182,7 +182,7 @@ exports.getActiveOrders = getActiveOrders;
 const getOrderHistory = async (req, res) => {
     if (!req.user)
         throw new Errors_1.UnauthorizedError("Unauthenticated");
-    const userId = req.user?.id || req.user?._id;
+    const userId = req.user.id;
     const historyOrders = await connection_1.db
         .select({
         orderId: schema_1.orders.id,
@@ -209,7 +209,7 @@ exports.getOrderHistory = getOrderHistory;
 const getOrderDetails = async (req, res) => {
     if (!req.user)
         throw new Errors_1.UnauthorizedError("Unauthenticated");
-    const userId = req.user?.id || req.user?._id;
+    const userId = req.user.id;
     const { orderId } = req.params;
     const orderInfo = await connection_1.db
         .select({

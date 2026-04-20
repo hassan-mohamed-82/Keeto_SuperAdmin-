@@ -225,7 +225,7 @@ export const login = async (req: Request, res: Response) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) throw new BadRequest("Invalid credentials");
 
-    const token = generateUserToken({ id: user.id, name: user.name, email: user.email });
+    const token = generateUserToken({ id: user.id, name: user.name });
 
     return SuccessResponse(res, { message: "Login successful", data: { token, user: { id: user.id, name: user.name, email: user.email } } });
 };

@@ -35,8 +35,7 @@ async function login(req, res) {
     const tokenPayload = {
         id: admin[0].id,
         name: admin[0].name,
-        role: (role && role[0] ? role[0].name : "admin"),
-        // permissions: admin[0].permissions,
+        type: admin[0].type,
     };
     const token = (0, jwt_1.generateAdminToken)(tokenPayload);
     return (0, response_1.SuccessResponse)(res, {

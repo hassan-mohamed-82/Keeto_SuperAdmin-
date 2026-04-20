@@ -140,7 +140,7 @@ export const getRestaurantDetails = async (req: Request, res: Response) => {
 // ==========================================
 export const toggleFavorite = async (req: Request, res: Response) => {
    if (!req.user) throw new UnauthorizedError("Unauthenticated");
-    const userId = req.user?.id || req.user?._id; 
+    const userId = req.user.id; 
     const { restaurantId, foodId } = req.body;
 
    if (!restaurantId && !foodId) {
@@ -178,7 +178,7 @@ if (restaurantId && foodId) {
 export const getUserFavorites = async (req: Request, res: Response) => {
      
      if (!req.user) throw new UnauthorizedError("Unauthenticated");
-    const userId = req.user?.id || req.user?._id; 
+    const userId = req.user.id; 
     const favorite = await db.select().from(favorites).where(eq(favorites.userId, userId));
 
     return SuccessResponse(res, { data: favorite });

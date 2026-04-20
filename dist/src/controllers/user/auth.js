@@ -194,7 +194,7 @@ const login = async (req, res) => {
     const isMatch = await bcrypt_1.default.compare(password, user.password);
     if (!isMatch)
         throw new BadRequest_1.BadRequest("Invalid credentials");
-    const token = (0, jwt_1.generateUserToken)({ id: user.id, name: user.name, email: user.email });
+    const token = (0, jwt_1.generateUserToken)({ id: user.id, name: user.name });
     return (0, response_1.SuccessResponse)(res, { message: "Login successful", data: { token, user: { id: user.id, name: user.name, email: user.email } } });
 };
 exports.login = login;

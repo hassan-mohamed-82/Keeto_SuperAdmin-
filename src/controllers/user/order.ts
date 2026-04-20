@@ -15,7 +15,7 @@ import { UnauthorizedError } from "../../Errors";
 // ==========================================
 export const checkout = async (req: Request | any, res: Response) => {
     if (!req.user) throw new UnauthorizedError("Unauthenticated");
-    const userId = req.user?.id || req.user?._id; 
+    const userId = req.user.id; 
     const { orderSource, paymentMethodId, orderType, idempotencyKey, userZoneId, branchId } = req.body;
 
     // 1. Idempotency Check
@@ -177,7 +177,7 @@ export const checkout = async (req: Request | any, res: Response) => {
 // ==========================================
 export const getActiveOrders = async (req: Request, res: Response) => {
     if (!req.user) throw new UnauthorizedError("Unauthenticated");
-    const userId = req.user?.id || req.user?._id; 
+    const userId = req.user.id; 
     const activeOrders = await db
         .select({
             orderId: orders.id,
@@ -209,7 +209,7 @@ export const getActiveOrders = async (req: Request, res: Response) => {
 export const getOrderHistory = async (req: Request, res: Response) => {
      
     if (!req.user) throw new UnauthorizedError("Unauthenticated");
-    const userId = req.user?.id || req.user?._id; 
+    const userId = req.user.id; 
     const historyOrders = await db
         .select({
             orderId: orders.id,
@@ -240,7 +240,7 @@ export const getOrderHistory = async (req: Request, res: Response) => {
 // ==========================================
 export const getOrderDetails = async (req: Request, res: Response) => {
     if (!req.user) throw new UnauthorizedError("Unauthenticated");
-    const userId = req.user?.id || req.user?._id; 
+    const userId = req.user.id; 
     const { orderId } = req.params;
 
     const orderInfo = await db

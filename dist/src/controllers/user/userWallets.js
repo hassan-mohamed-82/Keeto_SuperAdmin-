@@ -14,7 +14,7 @@ const Errors_1 = require("../../Errors");
 const addFundToWallet = async (req, res) => {
     if (!req.user)
         throw new Errors_1.UnauthorizedError("Unauthenticated");
-    const userId = req.user?.id || req.user?._id;
+    const userId = req.user.id;
     const { amount, paymentMethodId, receiptImage } = req.body;
     const depositAmount = Number(amount);
     const [method] = await connection_1.db
@@ -90,7 +90,7 @@ exports.addFundToWallet = addFundToWallet;
 const convertLoyaltyPoints = async (req, res) => {
     if (!req.user)
         throw new Errors_1.UnauthorizedError("Unauthenticated");
-    const userId = req.user?.id || req.user?._id;
+    const userId = req.user.id;
     const { pointsToConvert } = req.body;
     const points = parseInt(pointsToConvert);
     // افتراض: كل 100 نقطة = 10 جنيه
@@ -131,7 +131,7 @@ exports.convertLoyaltyPoints = convertLoyaltyPoints;
 const getWalletHistory = async (req, res) => {
     if (!req.user)
         throw new Errors_1.UnauthorizedError("Unauthenticated");
-    const userId = req.user?.id || req.user?._id;
+    const userId = req.user.id;
     const { filter } = req.query;
     let conditions = (0, drizzle_orm_1.eq)(schema_1.userWalletTransactions.userId, userId);
     if (filter === "orders") {

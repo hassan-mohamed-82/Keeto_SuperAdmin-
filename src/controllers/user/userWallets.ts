@@ -13,7 +13,7 @@ import { UnauthorizedError } from "../../Errors";
 // =====================================================
 export const addFundToWallet = async (req: Request, res: Response) => {
     if (!req.user) throw new UnauthorizedError("Unauthenticated");
-    const userId = req.user?.id || req.user?._id; 
+    const userId = req.user.id; 
     const {
         amount,
         paymentMethodId,
@@ -105,7 +105,7 @@ export const addFundToWallet = async (req: Request, res: Response) => {
 // =====================================================
 export const convertLoyaltyPoints = async (req: Request, res: Response) => {
     if (!req.user) throw new UnauthorizedError("Unauthenticated");
-    const userId = req.user?.id || req.user?._id; 
+    const userId = req.user.id; 
     const { pointsToConvert } = req.body;
     const points = parseInt(pointsToConvert);
 
@@ -153,7 +153,7 @@ export const convertLoyaltyPoints = async (req: Request, res: Response) => {
 // =====================================================
 export const getWalletHistory = async (req: Request, res: Response) => {
     if (!req.user) throw new UnauthorizedError("Unauthenticated");
-    const userId = req.user?.id || req.user?._id; 
+    const userId = req.user.id; 
      const { filter } = req.query;
     let conditions = eq(userWalletTransactions.userId, userId as string);
 
