@@ -16,22 +16,28 @@ export const getUserAddresses = async (req: Request, res: Response) => {
 };
 
 export const addUserAddress = async (req: Request, res: Response) => {
-    if (!req.user) throw new UnauthorizedError("Unauthenticated");
-    const userId = req.user.id; 
-    const { type, title, street, number, floor } = req.body;
+    try {
+        if (!req.user) throw new UnauthorizedError("Unauthenticated");
+        const userId = req.user.id; 
+        const { type, title, street, number, floor, zoneId } = req.body;
 
-    const newAddress = await db.insert(addresses).values({
-        id: uuidv4(),
-        userId,
-        type,
-        title,
-        street,
-        number,
-        zoneId: req.body.zoneId,
-        floor,
-    });
+        const newAddress = await db.insert(addresses).values({
+            id: uuidv4(),
+            userId,
+            type,
+            title,
+            street,
+            number,
+            zoneId,
+            floor,
+        });
 
-    return SuccessResponse(res, { message: "Address added successfully", data: newAddress });
+        return SuccessResponse(res, { message: "Address added successfully", data: newAddress });
+    } catch (error) {
+        // السطر ده هيفضح المشكلة الحقيقية في التيرمينال
+        console.error("🔥 MYSQL ERROR DETAILS:", error);
+        throw error;
+    }
 };
 
 export const deleteUserAddress = async (req: Request, res: Response) => {
