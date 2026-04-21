@@ -29,7 +29,7 @@ const authenticated_1 = require("../../middlewares/authenticated");
 const authorized_1 = require("../../middlewares/authorized");
 const router = (0, express_1.Router)();
 router.use("/auth", auth_1.default);
-router.use(authenticated_1.authenticated, (0, authorized_1.authorizeRoles)("superadmin", "admin"));
+router.use(authenticated_1.authenticated, (0, authorized_1.authorizeRoles)("branch_manager", "subadmin", "restaurantadmin"));
 router.use("/admin", admin_1.default);
 router.use("/roles", roles_1.default);
 router.use("/countries", country_1.default);
