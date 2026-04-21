@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { db } from "../../models/connection";
-import { cuisines, categories, restaurants, food, favorites } from "../../models/schema";
+import { cuisines, categories, restaurants, food, favorites, foodVariations, variationOptions } from "../../models/schema";
 import { eq, and } from "drizzle-orm";
 import { SuccessResponse } from "../../utils/response";
 import { BadRequest, UnauthorizedError } from "../../Errors";
@@ -96,45 +96,105 @@ export const getFoodsByCategory = async (req: Request, res: Response) => {
 export const getRestaurantDetails = async (req: Request, res: Response) => {
     const { restaurantId } = req.params;
 
-    // 1. بيانات المطعم
+    // 1. جلب بيانات المطعم
     const [restaurantInfo] = await db.select().from(restaurants)
         .where(eq(restaurants.id, restaurantId)).limit(1);
 
     if (!restaurantInfo) throw new Error("المطعم غير موجود");
 
-    // 2. منيو المطعم (بنجيب الأكل ونعمله Join مع الفئات عشان نعرض اسم الفئة)
-    const restaurantMenu = await db.select({
+    // 2. جلب المنيو بالكامل مع الفئات (Categories) والإضافات (Variations & Options)
+    const rawMenu = await db.select({
+        // بيانات الأكلة
         foodId: food.id,
         foodName: food.name,
         description: food.description,
         price: food.price,
         image: food.image,
-        foodType: food.foodtype,
-        categoryId: categories.id,
-        categoryName: categories.name
-    }).from(food)
+        // بيانات الفئة
+        categoryName: categories.name,
+        // بيانات الفارييشن (مثال: الحجم)
+        variationId: foodVariations.id,
+        variationName: foodVariations.name,
+        isRequired: foodVariations.isRequired,
+        selectionType: foodVariations.selectionType,
+        min: foodVariations.min,
+        max: foodVariations.max,
+        // بيانات الخيارات (مثال: صغير، وسط، كبير)
+        optionId: variationOptions.id,
+        optionName: variationOptions.optionName,
+        additionalPrice: variationOptions.additionalPrice
+    })
+    .from(food)
     .leftJoin(categories, eq(food.categoryid, categories.id))
+    .leftJoin(foodVariations, eq(food.id, foodVariations.foodId))
+    .leftJoin(variationOptions, eq(foodVariations.id, variationOptions.variationId))
     .where(and(
         eq(food.restaurantid, restaurantId),
         eq(food.status, "active")
     ));
 
-    // 💡 تريكة للفرونت إند: نجمع الأكل جوه أقسامه عشان يظهر متصنف في الشاشة
-    const groupedMenu = restaurantMenu.reduce((acc: any, item) => {
-        const catName = item.categoryName || "أخرى";
-        if (!acc[catName]) acc[catName] = [];
-        acc[catName].push(item);
+    // 3. 💡 التريكة الاحترافية: تجميع البيانات (Grouping) لتكوين شجرة JSON متكاملة للفرونت إند
+    const groupedMenuObj = rawMenu.reduce((acc: any, row) => {
+        const catName = row.categoryName || "أخرى";
+        
+        // لو الكاتيجوري مش موجود، نكريته
+        if (!acc[catName]) acc[catName] = {};
+
+        // لو الأكلة مش موجودة جوه الكاتيجوري، نكريتها ونجهز مصفوفة للفارييشنز
+        if (!acc[catName][row.foodId]) {
+            acc[catName][row.foodId] = {
+                id: row.foodId,
+                name: row.foodName,
+                description: row.description,
+                price: row.price,
+                image: row.image,
+                variations: {} // هنستخدم Object مؤقتاً عشان نمنع التكرار
+            };
+        }
+
+        // لو الأكلة ليها فارييشن (Variations)
+        if (row.variationId) {
+            if (!acc[catName][row.foodId].variations[row.variationId]) {
+                acc[catName][row.foodId].variations[row.variationId] = {
+                    id: row.variationId,
+                    name: row.variationName,
+                    isRequired: row.isRequired,
+                    selectionType: row.selectionType,
+                    min: row.min,
+                    max: row.max,
+                    options: [] // مصفوفة الخيارات
+                };
+            }
+
+            // لو الفارييشن ليه خيارات (Options)
+            if (row.optionId) {
+                acc[catName][row.foodId].variations[row.variationId].options.push({
+                    id: row.optionId,
+                    name: row.optionName,
+                    additionalPrice: row.additionalPrice
+                });
+            }
+        }
         return acc;
     }, {});
+
+    // 4. تحويل الـ Objects الداخلية لـ Arrays عشان الفرونت إند يعرف يعمل عليها .map()
+    const finalMenu: any = {};
+    for (const [category, foodsObj] of Object.entries(groupedMenuObj)) {
+        finalMenu[category] = Object.values(foodsObj as object).map((foodItem: any) => {
+            // تحويل الفارييشنز من Object لـ Array
+            foodItem.variations = Object.values(foodItem.variations);
+            return foodItem;
+        });
+    }
 
     return SuccessResponse(res, { 
         data: {
             restaurant: restaurantInfo,
-            menu: groupedMenu // هيرجعلك JSON الأكل متقسم: { "Shawerma": [...], "Meals": [...] }
+            menu: finalMenu 
         } 
     });
 };
-
 // ==========================================
 // 5. إضافة/إزالة المطعم من المفضلة (زرار القلب)
 // ==========================================
