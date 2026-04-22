@@ -304,29 +304,35 @@ export const getOrderDetails = async (req: Request, res: Response) => {
 };
 
 
-export const getOrderPrerequisites = async (req: Request, res: Response) => {
-        // بنستقبل الـ IDs من الـ query (مثال: ?userId=xxx&restaurantId=yyy)
-        // وممكن تستقبل الـ userId من الـ req.user لو عامل Authentication middleware
-        const userId = req.query.userId as string;
+export const getOrderPrerequisites = async (req: Request | any, res: Response) => {
+    try {
+        // 1. استخراج الـ userId بأمان من التوكن عبر الـ Middleware
+        if (!req.user) {
+            return res.status(401).json({ success: false, message: "Unauthenticated: Token is missing or invalid" });
+            // أو يمكنك استخدام: throw new UnauthorizedError("Unauthenticated"); بناءً على هيكلة مشروعك
+        }
+        const userId = req.user.id;
+
+        // 2. استخراج الـ restaurantId من الرابط (لأن اليوزر هو اللي بيختار المطعم)
         const restaurantId = req.query.restaurantId as string;
 
-        if (!userId || !restaurantId) {
-            return res.status(400).json({ success: false, message: "userId and restaurantId are required" });
+        if (!restaurantId) {
+            return res.status(400).json({ success: false, message: "restaurantId is required" });
         }
 
         // جلب البيانات الـ 3 في نفس الوقت 
         const [userAddresses, restaurantBranches, activePaymentMethods] = await Promise.all([
-            // 1. عناوين اليوزر
+            // أ) عناوين اليوزر (آمنة تماماً لأنها مرتبطة بالتوكن فقط)
             db.select().from(addresses).where(eq(addresses.userId, userId)),
             
-            // 2. فروع المطعم
+            // ب) فروع المطعم
             db.select().from(branches).where(eq(branches.restaurantId, restaurantId)),
             
-            // 3. طرق الدفع المفعلة (عدل isActive لـ status لو كنت مسجلها كنص 'active' في الداتابيز)
+            // ج) طرق الدفع المفعلة
             db.select().from(paymentMethods).where(eq(paymentMethods.isActive, true))
         ]);
 
-        // تجميع الداتا وإرسالها بنفس طريقتك
+        // تجميع الداتا وإرسالها
         return SuccessResponse(res, { 
             data: {
                 addresses: userAddresses,
@@ -335,5 +341,8 @@ export const getOrderPrerequisites = async (req: Request, res: Response) => {
             }
         });
 
-    
+    } catch (error) {
+        console.error("Error fetching order prerequisites:", error);
+        return res.status(500).json({ success: false, message: "Internal server error" });
+    }
 };

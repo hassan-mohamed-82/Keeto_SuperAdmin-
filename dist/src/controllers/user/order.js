@@ -262,29 +262,39 @@ const getOrderDetails = async (req, res) => {
 };
 exports.getOrderDetails = getOrderDetails;
 const getOrderPrerequisites = async (req, res) => {
-    // بنستقبل الـ IDs من الـ query (مثال: ?userId=xxx&restaurantId=yyy)
-    // وممكن تستقبل الـ userId من الـ req.user لو عامل Authentication middleware
-    const userId = req.query.userId;
-    const restaurantId = req.query.restaurantId;
-    if (!userId || !restaurantId) {
-        return res.status(400).json({ success: false, message: "userId and restaurantId are required" });
-    }
-    // جلب البيانات الـ 3 في نفس الوقت 
-    const [userAddresses, restaurantBranches, activePaymentMethods] = await Promise.all([
-        // 1. عناوين اليوزر
-        connection_1.db.select().from(schema_1.addresses).where((0, drizzle_orm_1.eq)(schema_1.addresses.userId, userId)),
-        // 2. فروع المطعم
-        connection_1.db.select().from(schema_1.branches).where((0, drizzle_orm_1.eq)(schema_1.branches.restaurantId, restaurantId)),
-        // 3. طرق الدفع المفعلة (عدل isActive لـ status لو كنت مسجلها كنص 'active' في الداتابيز)
-        connection_1.db.select().from(schema_1.paymentMethods).where((0, drizzle_orm_1.eq)(schema_1.paymentMethods.isActive, true))
-    ]);
-    // تجميع الداتا وإرسالها بنفس طريقتك
-    return (0, response_1.SuccessResponse)(res, {
-        data: {
-            addresses: userAddresses,
-            branches: restaurantBranches,
-            paymentMethods: activePaymentMethods
+    try {
+        // 1. استخراج الـ userId بأمان من التوكن عبر الـ Middleware
+        if (!req.user) {
+            return res.status(401).json({ success: false, message: "Unauthenticated: Token is missing or invalid" });
+            // أو يمكنك استخدام: throw new UnauthorizedError("Unauthenticated"); بناءً على هيكلة مشروعك
         }
-    });
+        const userId = req.user.id;
+        // 2. استخراج الـ restaurantId من الرابط (لأن اليوزر هو اللي بيختار المطعم)
+        const restaurantId = req.query.restaurantId;
+        if (!restaurantId) {
+            return res.status(400).json({ success: false, message: "restaurantId is required" });
+        }
+        // جلب البيانات الـ 3 في نفس الوقت 
+        const [userAddresses, restaurantBranches, activePaymentMethods] = await Promise.all([
+            // أ) عناوين اليوزر (آمنة تماماً لأنها مرتبطة بالتوكن فقط)
+            connection_1.db.select().from(schema_1.addresses).where((0, drizzle_orm_1.eq)(schema_1.addresses.userId, userId)),
+            // ب) فروع المطعم
+            connection_1.db.select().from(schema_1.branches).where((0, drizzle_orm_1.eq)(schema_1.branches.restaurantId, restaurantId)),
+            // ج) طرق الدفع المفعلة
+            connection_1.db.select().from(schema_1.paymentMethods).where((0, drizzle_orm_1.eq)(schema_1.paymentMethods.isActive, true))
+        ]);
+        // تجميع الداتا وإرسالها
+        return (0, response_1.SuccessResponse)(res, {
+            data: {
+                addresses: userAddresses,
+                branches: restaurantBranches,
+                paymentMethods: activePaymentMethods
+            }
+        });
+    }
+    catch (error) {
+        console.error("Error fetching order prerequisites:", error);
+        return res.status(500).json({ success: false, message: "Internal server error" });
+    }
 };
 exports.getOrderPrerequisites = getOrderPrerequisites;
