@@ -1,7 +1,7 @@
 // controllers/user/OrderController.ts
 import { Request, Response } from "express";
 import { db } from "../../models/connection";
-import { orders, orderItems, restaurantBusinessPlans, food, restaurants, restaurantWallets, restaurantZoneDeliveryFees, zoneDeliveryFees, restaurantSettings, restaurantSchedules, cartItems, users, paymentMethods } from "../../models/schema";
+import { orders, orderItems, restaurantBusinessPlans, food, restaurants, restaurantWallets, restaurantZoneDeliveryFees, zoneDeliveryFees, restaurantSettings, restaurantSchedules, cartItems, users, paymentMethods, addresses } from "../../models/schema";
 import { eq, and, inArray, sql, desc } from "drizzle-orm";
 import { SuccessResponse } from "../../utils/response";
 import { BadRequest } from "../../Errors/BadRequest";
@@ -16,7 +16,7 @@ import { UnauthorizedError } from "../../Errors";
 export const checkout = async (req: Request | any, res: Response) => {
     if (!req.user) throw new UnauthorizedError("Unauthenticated");
     const userId = req.user.id; 
-    const { orderSource, paymentMethodId, orderType, idempotencyKey, userZoneId, branchId } = req.body;
+    const { orderSource, paymentMethodId, orderType, idempotencyKey, userZoneId, branchId, addressId } = req.body;
 
     // 1. Idempotency Check
     if (idempotencyKey) {
@@ -76,12 +76,24 @@ export const checkout = async (req: Request | any, res: Response) => {
     // 5. Smart Delivery Logic
     let deliveryFee = 0;
     if (orderType === "delivery") {
-        if (!userZoneId) throw new BadRequest("Delivery zone is required");
+        if (!addressId) throw new BadRequest("Delivery address is required");
+
+        // التحقق إن العنوان تبع اليوزر فعلاً
+        const [userAddress] = await db.select().from(addresses)
+            .where(and(
+                eq(addresses.id, addressId),
+                eq(addresses.userId, userId)
+            )).limit(1);
+
+        if (!userAddress) throw new BadRequest("Invalid delivery address");
+
+        // استخدام الـ zone من العنوان لحساب رسوم التوصيل
+        const resolvedZoneId = userZoneId || userAddress.zoneId;
 
         const [selfFee] = await db.select().from(restaurantZoneDeliveryFees)
             .where(and(
                 eq(restaurantZoneDeliveryFees.restaurantId, restaurantId),
-                eq(restaurantZoneDeliveryFees.zoneId, userZoneId),
+                eq(restaurantZoneDeliveryFees.zoneId, resolvedZoneId),
                 eq(restaurantZoneDeliveryFees.status, "active")
             )).limit(1);
 
@@ -148,6 +160,7 @@ export const checkout = async (req: Request | any, res: Response) => {
             userId,
             restaurantId,
             branchId, 
+            addressId: addressId || null,
             orderSource,
             paymentMethodId,
             orderType: orderType || "delivery",

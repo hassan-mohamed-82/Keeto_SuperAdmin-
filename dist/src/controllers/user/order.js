@@ -17,7 +17,7 @@ const checkout = async (req, res) => {
     if (!req.user)
         throw new Errors_1.UnauthorizedError("Unauthenticated");
     const userId = req.user.id;
-    const { orderSource, paymentMethodId, orderType, idempotencyKey, userZoneId, branchId } = req.body;
+    const { orderSource, paymentMethodId, orderType, idempotencyKey, userZoneId, branchId, addressId } = req.body;
     // 1. Idempotency Check
     if (idempotencyKey) {
         const [existing] = await connection_1.db.select().from(schema_1.orders).where((0, drizzle_orm_1.eq)(schema_1.orders.idempotencyKey, idempotencyKey)).limit(1);
@@ -67,10 +67,17 @@ const checkout = async (req, res) => {
     // 5. Smart Delivery Logic
     let deliveryFee = 0;
     if (orderType === "delivery") {
-        if (!userZoneId)
-            throw new BadRequest_1.BadRequest("Delivery zone is required");
+        if (!addressId)
+            throw new BadRequest_1.BadRequest("Delivery address is required");
+        // التحقق إن العنوان تبع اليوزر فعلاً
+        const [userAddress] = await connection_1.db.select().from(schema_1.addresses)
+            .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_1.addresses.id, addressId), (0, drizzle_orm_1.eq)(schema_1.addresses.userId, userId))).limit(1);
+        if (!userAddress)
+            throw new BadRequest_1.BadRequest("Invalid delivery address");
+        // استخدام الـ zone من العنوان لحساب رسوم التوصيل
+        const resolvedZoneId = userZoneId || userAddress.zoneId;
         const [selfFee] = await connection_1.db.select().from(schema_1.restaurantZoneDeliveryFees)
-            .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_1.restaurantZoneDeliveryFees.restaurantId, restaurantId), (0, drizzle_orm_1.eq)(schema_1.restaurantZoneDeliveryFees.zoneId, userZoneId), (0, drizzle_orm_1.eq)(schema_1.restaurantZoneDeliveryFees.status, "active"))).limit(1);
+            .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_1.restaurantZoneDeliveryFees.restaurantId, restaurantId), (0, drizzle_orm_1.eq)(schema_1.restaurantZoneDeliveryFees.zoneId, resolvedZoneId), (0, drizzle_orm_1.eq)(schema_1.restaurantZoneDeliveryFees.status, "active"))).limit(1);
         if (!selfFee)
             throw new BadRequest_1.BadRequest("Restaurant does not deliver to your zone directly");
         deliveryFee = parseFloat(selfFee.deliveryFee || "0");
@@ -126,6 +133,7 @@ const checkout = async (req, res) => {
             userId,
             restaurantId,
             branchId,
+            addressId: addressId || null,
             orderSource,
             paymentMethodId,
             orderType: orderType || "delivery",

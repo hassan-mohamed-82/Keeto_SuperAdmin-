@@ -5,6 +5,7 @@ import { food } from "./food";
 import { users } from "../user/Users";
 import { paymentMethods } from "./payment_methodes";
 import { branches } from "../../schema";
+import { addresses } from "../user/address";
 
 export const orders = mysqlTable("orders", {
     id: char("id", { length: 36 }).primaryKey().default(sql`(UUID())`),
@@ -23,6 +24,10 @@ export const orders = mysqlTable("orders", {
     branchId: char("branch_id", { length: 36 })
         .references(() => branches.id)
         .notNull(), 
+
+    // 👇 عنوان التوصيل المختار من اليوزر
+    addressId: char("address_id", { length: 36 })
+        .references(() => addresses.id),
 
     orderSource: mysqlEnum("order_source", ["online_order", "food_aggregator"]).notNull(),
 
