@@ -1,7 +1,7 @@
 // controllers/user/OrderController.ts
 import { Request, Response } from "express";
 import { db } from "../../models/connection";
-import { orders, orderItems, restaurantBusinessPlans, food, restaurants, restaurantWallets, restaurantZoneDeliveryFees, zoneDeliveryFees, restaurantSettings, restaurantSchedules, cartItems, users, paymentMethods, addresses } from "../../models/schema";
+import { orders, orderItems, restaurantBusinessPlans, food, restaurants, restaurantWallets, restaurantZoneDeliveryFees, zoneDeliveryFees, restaurantSettings, restaurantSchedules, cartItems, users, paymentMethods, addresses, branches } from "../../models/schema";
 import { eq, and, inArray, sql, desc } from "drizzle-orm";
 import { SuccessResponse } from "../../utils/response";
 import { BadRequest } from "../../Errors/BadRequest";
@@ -301,4 +301,39 @@ export const getOrderDetails = async (req: Request, res: Response) => {
             items
         }
     });
+};
+
+
+export const getOrderPrerequisites = async (req: Request, res: Response) => {
+        // بنستقبل الـ IDs من الـ query (مثال: ?userId=xxx&restaurantId=yyy)
+        // وممكن تستقبل الـ userId من الـ req.user لو عامل Authentication middleware
+        const userId = req.query.userId as string;
+        const restaurantId = req.query.restaurantId as string;
+
+        if (!userId || !restaurantId) {
+            return res.status(400).json({ success: false, message: "userId and restaurantId are required" });
+        }
+
+        // جلب البيانات الـ 3 في نفس الوقت 
+        const [userAddresses, restaurantBranches, activePaymentMethods] = await Promise.all([
+            // 1. عناوين اليوزر
+            db.select().from(addresses).where(eq(addresses.userId, userId)),
+            
+            // 2. فروع المطعم
+            db.select().from(branches).where(eq(branches.restaurantId, restaurantId)),
+            
+            // 3. طرق الدفع المفعلة (عدل isActive لـ status لو كنت مسجلها كنص 'active' في الداتابيز)
+            db.select().from(paymentMethods).where(eq(paymentMethods.isActive, true))
+        ]);
+
+        // تجميع الداتا وإرسالها بنفس طريقتك
+        return SuccessResponse(res, { 
+            data: {
+                addresses: userAddresses,
+                branches: restaurantBranches,
+                paymentMethods: activePaymentMethods
+            }
+        });
+
+    
 };

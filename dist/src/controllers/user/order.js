@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getOrderDetails = exports.getOrderHistory = exports.getActiveOrders = exports.checkout = void 0;
+exports.getOrderPrerequisites = exports.getOrderDetails = exports.getOrderHistory = exports.getActiveOrders = exports.checkout = void 0;
 const connection_1 = require("../../models/connection");
 const schema_1 = require("../../models/schema");
 const drizzle_orm_1 = require("drizzle-orm");
@@ -261,3 +261,30 @@ const getOrderDetails = async (req, res) => {
     });
 };
 exports.getOrderDetails = getOrderDetails;
+const getOrderPrerequisites = async (req, res) => {
+    // بنستقبل الـ IDs من الـ query (مثال: ?userId=xxx&restaurantId=yyy)
+    // وممكن تستقبل الـ userId من الـ req.user لو عامل Authentication middleware
+    const userId = req.query.userId;
+    const restaurantId = req.query.restaurantId;
+    if (!userId || !restaurantId) {
+        return res.status(400).json({ success: false, message: "userId and restaurantId are required" });
+    }
+    // جلب البيانات الـ 3 في نفس الوقت 
+    const [userAddresses, restaurantBranches, activePaymentMethods] = await Promise.all([
+        // 1. عناوين اليوزر
+        connection_1.db.select().from(schema_1.addresses).where((0, drizzle_orm_1.eq)(schema_1.addresses.userId, userId)),
+        // 2. فروع المطعم
+        connection_1.db.select().from(schema_1.branches).where((0, drizzle_orm_1.eq)(schema_1.branches.restaurantId, restaurantId)),
+        // 3. طرق الدفع المفعلة (عدل isActive لـ status لو كنت مسجلها كنص 'active' في الداتابيز)
+        connection_1.db.select().from(schema_1.paymentMethods).where((0, drizzle_orm_1.eq)(schema_1.paymentMethods.isActive, true))
+    ]);
+    // تجميع الداتا وإرسالها بنفس طريقتك
+    return (0, response_1.SuccessResponse)(res, {
+        data: {
+            addresses: userAddresses,
+            branches: restaurantBranches,
+            paymentMethods: activePaymentMethods
+        }
+    });
+};
+exports.getOrderPrerequisites = getOrderPrerequisites;
