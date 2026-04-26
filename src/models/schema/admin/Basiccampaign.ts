@@ -7,14 +7,14 @@ import {
     char,
     text,
     time
-} from "drizzle-orm/mysql-core";
+, longtext } from "drizzle-orm/mysql-core";
 import { sql } from "drizzle-orm";
 
 export const basiccampaign = mysqlTable("basiccampaign", {
     id: char("id", { length: 36 }).primaryKey().default(sql`(UUID())`),
     Title: varchar("title", { length: 255 }).notNull(),
     description: text("description"),
-    image: varchar("image", { length: 255 }),
+    image: longtext("image"),
     status: mysqlEnum("status", ["active", "inactive"]).default("active"),
     startDate: timestamp("start_date").notNull(),
     endDate: timestamp("end_date").notNull(),

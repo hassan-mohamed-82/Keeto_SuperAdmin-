@@ -6,7 +6,7 @@ import {
     json,
     char,
     text
-} from "drizzle-orm/mysql-core";
+, longtext } from "drizzle-orm/mysql-core";
 import { sql } from "drizzle-orm";
 
 export const categories = mysqlTable("categories", {
@@ -14,8 +14,8 @@ export const categories = mysqlTable("categories", {
     name: varchar("name", { length: 255 }).notNull(),
     nameAr: varchar("name_ar", { length: 255 }).notNull().default(''),
     nameFr: varchar("name_fr", { length: 255 }).notNull().default(''),
-    Image: varchar("image", { length: 255 }).notNull(),
-    meta_image: varchar("meta_image", { length: 255 }),
+    Image: longtext("image").notNull(),
+    meta_image: longtext("meta_image"),
     title: text("title"),
     titleAr: text("title_ar").notNull().default(''),
     titleFr: text("title_fr").notNull().default(''),

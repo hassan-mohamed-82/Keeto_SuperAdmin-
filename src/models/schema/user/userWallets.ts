@@ -1,4 +1,4 @@
-import { mysqlTable, varchar, timestamp, decimal, mysqlEnum, char, int } from "drizzle-orm/mysql-core";
+import { mysqlTable, varchar, timestamp, decimal, mysqlEnum, char, int , longtext } from "drizzle-orm/mysql-core";
 import { sql } from "drizzle-orm";
 import { users } from "./Users";
 import { paymentMethods } from "../../schema";
@@ -50,7 +50,7 @@ export const userWalletTransactions = mysqlTable("user_wallet_transactions", {
 
     reference: varchar("reference", { length: 255 }),
 
-    receiptImage: varchar("receipt_image", { length: 255 }), // 🔥 مهم للـ manual
+    receiptImage: longtext("receipt_image"), // 🔥 مهم للـ manual
 
     status: mysqlEnum("status", ["pending", "approved", "rejected"])
         .default("approved"), // automatic = approved

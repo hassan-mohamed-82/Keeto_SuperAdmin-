@@ -7,7 +7,7 @@ import {
     char,
     text,
     date
-} from "drizzle-orm/mysql-core";
+, longtext } from "drizzle-orm/mysql-core";
 import { sql } from "drizzle-orm";
 
 // ⚠️ تأكد من استيراد الجداول دي من مساراتها الصحيحة عندك
@@ -32,8 +32,8 @@ export const restaurants = mysqlTable("restaurants", {
     zoneId: char("zone_id", { length: 36 }).references(() => zones.id).notNull(),
  
     // الصور (Files/Images)
-    logo: varchar("logo", { length: 255 }).notNull(),
-    cover: varchar("cover", { length: 255 }),
+    logo: longtext("logo").notNull(),
+    cover: longtext("cover"),
 
     // ==========================================
     // 2. Delivery & Owner Info (الصورة الثانية)

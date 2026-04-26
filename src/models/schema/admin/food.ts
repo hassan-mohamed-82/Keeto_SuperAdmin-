@@ -9,7 +9,7 @@ import {
     int,
     boolean,
     text
-} from "drizzle-orm/mysql-core";
+, longtext } from "drizzle-orm/mysql-core";
 import { sql } from "drizzle-orm";
 import { addons, categories, restaurants, subcategories } from "../../schema";
 export const food = mysqlTable("food", {
@@ -20,7 +20,7 @@ export const food = mysqlTable("food", {
     description: text("description").notNull(),
     descriptionAr: text("description_ar").notNull().default(''),
     descriptionFr: text("description_fr").notNull().default(''),
-    image: varchar("image", { length: 255 }).notNull(),
+    image: longtext("image").notNull(),
     restaurantid: char("restaurantid", { length: 36 }).references(() => restaurants.id).notNull(),
     categoryid: char("categoryid", { length: 36 }).references(() => categories.id).notNull(),
     subcategoryid: char("subcategoryid", { length: 36 }).references(() => subcategories.id).notNull(),
