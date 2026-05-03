@@ -8,5 +8,6 @@ router.post("/", (0, catchAsync_1.catchAsync)(admin_1.createAdmin));
 router.get("/", (0, catchAsync_1.catchAsync)(admin_1.getAllAdmins));
 router.get("/:id", (0, catchAsync_1.catchAsync)(admin_1.getAdminById));
 router.put("/:id", (0, catchAsync_1.catchAsync)(admin_1.updateAdmin));
+router.patch("/:id", (0, catchAsync_1.catchAsync)(admin_1.toggleAdminStatus));
 router.delete("/:id", (0, catchAsync_1.catchAsync)(admin_1.deleteAdmin));
 exports.default = router;
