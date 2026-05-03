@@ -7,24 +7,42 @@ const drizzle_orm_1 = require("drizzle-orm");
 const response_1 = require("../../utils/response");
 const Errors_1 = require("../../Errors");
 // ==========================================
-// 1. API شاشة الهوم (Home Screen)
-// بيجيب المطابخ، الفئات، والمطاعم في Request واحد عشان السرعة
+// 🔥 Helper: تجهيز favorites لو اليوزر عامل login
+// ==========================================
+const getUserFavoritesSets = async (userId) => {
+    const favoriteRestaurantIds = new Set();
+    const favoriteFoodIds = new Set();
+    if (!userId)
+        return { favoriteRestaurantIds, favoriteFoodIds };
+    const userFavorites = await connection_1.db
+        .select()
+        .from(schema_1.favorites)
+        .where((0, drizzle_orm_1.eq)(schema_1.favorites.userId, userId));
+    userFavorites.forEach(f => {
+        if (f.restaurantId)
+            favoriteRestaurantIds.add(f.restaurantId);
+        if (f.foodId)
+            favoriteFoodIds.add(f.foodId);
+    });
+    return { favoriteRestaurantIds, favoriteFoodIds };
+};
+// ==========================================
+// 1. Home Screen
 // ==========================================
 const getHomeScreen = async (req, res) => {
-    // 1. جلب المطابخ النشطة
+    const userId = req.user?.id;
+    const { favoriteRestaurantIds } = await getUserFavoritesSets(userId);
     const activeCuisines = await connection_1.db.select({
         id: schema_1.cuisines.id,
         name: schema_1.cuisines.name,
         image: schema_1.cuisines.Image
     }).from(schema_1.cuisines).where((0, drizzle_orm_1.eq)(schema_1.cuisines.status, "active"));
-    // 2. جلب الفئات النشطة
     const activeCategories = await connection_1.db.select({
         id: schema_1.categories.id,
         name: schema_1.categories.name,
         image: schema_1.categories.Image
     }).from(schema_1.categories).where((0, drizzle_orm_1.eq)(schema_1.categories.status, "active"));
-    // 3. جلب المطاعم (ممكن تحدد limit أو تعتمد على zoneId لليوزر)
-    const popularRestaurants = await connection_1.db.select({
+    const restaurantsData = await connection_1.db.select({
         id: schema_1.restaurants.id,
         name: schema_1.restaurants.name,
         cover: schema_1.restaurants.cover,
@@ -32,6 +50,10 @@ const getHomeScreen = async (req, res) => {
         address: schema_1.restaurants.address,
         minDeliveryTime: schema_1.restaurants.minDeliveryTime,
     }).from(schema_1.restaurants).where((0, drizzle_orm_1.eq)(schema_1.restaurants.status, "active"));
+    const popularRestaurants = restaurantsData.map(r => ({
+        ...r,
+        isFavorite: userId ? favoriteRestaurantIds.has(r.id) : false
+    }));
     return (0, response_1.SuccessResponse)(res, {
         data: {
             cuisines: activeCuisines,
@@ -42,11 +64,13 @@ const getHomeScreen = async (req, res) => {
 };
 exports.getHomeScreen = getHomeScreen;
 // ==========================================
-// 2. الفلترة بالمطبخ (لما يدوس على Turkish مثلاً)
+// 2. Restaurants by Cuisine
 // ==========================================
 const getRestaurantsByCuisine = async (req, res) => {
     const { cuisineId } = req.params;
-    const cuisineRestaurants = await connection_1.db.select({
+    const userId = req.user?.id;
+    const { favoriteRestaurantIds } = await getUserFavoritesSets(userId);
+    const data = await connection_1.db.select({
         id: schema_1.restaurants.id,
         name: schema_1.restaurants.name,
         cover: schema_1.restaurants.cover,
@@ -55,16 +79,21 @@ const getRestaurantsByCuisine = async (req, res) => {
         minDeliveryTime: schema_1.restaurants.minDeliveryTime,
     }).from(schema_1.restaurants)
         .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_1.restaurants.cuisineId, cuisineId), (0, drizzle_orm_1.eq)(schema_1.restaurants.status, "active")));
-    return (0, response_1.SuccessResponse)(res, { data: cuisineRestaurants });
+    const result = data.map(r => ({
+        ...r,
+        isFavorite: userId ? favoriteRestaurantIds.has(r.id) : false
+    }));
+    return (0, response_1.SuccessResponse)(res, { data: result });
 };
 exports.getRestaurantsByCuisine = getRestaurantsByCuisine;
 // ==========================================
-// 3. الفلترة بالفئة (لما يدوس على Shawerma مثلاً)
-// بيجيب الأكلات من الفئة دي ومعاها بيانات المطعم اللي بيقدمها
+// 3. Foods by Category
 // ==========================================
 const getFoodsByCategory = async (req, res) => {
     const { categoryId } = req.params;
-    const categoryFoods = await connection_1.db.select({
+    const userId = req.user?.id;
+    const { favoriteFoodIds } = await getUserFavoritesSets(userId);
+    const data = await connection_1.db.select({
         foodId: schema_1.food.id,
         foodName: schema_1.food.name,
         foodImage: schema_1.food.image,
@@ -72,40 +101,45 @@ const getFoodsByCategory = async (req, res) => {
         restaurantId: schema_1.restaurants.id,
         restaurantName: schema_1.restaurants.name,
         restaurantLogo: schema_1.restaurants.logo
-    }).from(schema_1.food)
+    })
+        .from(schema_1.food)
         .leftJoin(schema_1.restaurants, (0, drizzle_orm_1.eq)(schema_1.food.restaurantid, schema_1.restaurants.id))
         .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_1.food.categoryid, categoryId), (0, drizzle_orm_1.eq)(schema_1.food.status, "active")));
-    return (0, response_1.SuccessResponse)(res, { data: categoryFoods });
+    const result = data.map(f => ({
+        ...f,
+        isFavorite: userId ? favoriteFoodIds.has(f.foodId) : false
+    }));
+    return (0, response_1.SuccessResponse)(res, { data: result });
 };
 exports.getFoodsByCategory = getFoodsByCategory;
 // ==========================================
-// 4. صفحة المطعم والمنيو (لما يدوس على مطعم معين)
+// 4. Restaurant Details + Menu
 // ==========================================
 const getRestaurantDetails = async (req, res) => {
     const { restaurantId } = req.params;
-    // 1. جلب بيانات المطعم
+    const userId = req.user?.id;
+    const { favoriteFoodIds, favoriteRestaurantIds } = await getUserFavoritesSets(userId);
     const [restaurantInfo] = await connection_1.db.select().from(schema_1.restaurants)
-        .where((0, drizzle_orm_1.eq)(schema_1.restaurants.id, restaurantId)).limit(1);
+        .where((0, drizzle_orm_1.eq)(schema_1.restaurants.id, restaurantId));
     if (!restaurantInfo)
-        throw new Error("المطعم غير موجود");
-    // 2. جلب المنيو بالكامل مع الفئات (Categories) والإضافات (Variations & Options)
+        throw new Error("Restaurant not found");
+    const restaurantWithFav = {
+        ...restaurantInfo,
+        isFavorite: userId ? favoriteRestaurantIds.has(restaurantId) : false
+    };
     const rawMenu = await connection_1.db.select({
-        // بيانات الأكلة
         foodId: schema_1.food.id,
         foodName: schema_1.food.name,
         description: schema_1.food.description,
         price: schema_1.food.price,
         image: schema_1.food.image,
-        // بيانات الفئة
         categoryName: schema_1.categories.name,
-        // بيانات الفارييشن (مثال: الحجم)
         variationId: schema_1.foodVariations.id,
         variationName: schema_1.foodVariations.name,
         isRequired: schema_1.foodVariations.isRequired,
         selectionType: schema_1.foodVariations.selectionType,
         min: schema_1.foodVariations.min,
         max: schema_1.foodVariations.max,
-        // بيانات الخيارات (مثال: صغير، وسط، كبير)
         optionId: schema_1.variationOptions.id,
         optionName: schema_1.variationOptions.optionName,
         additionalPrice: schema_1.variationOptions.additionalPrice
@@ -115,13 +149,10 @@ const getRestaurantDetails = async (req, res) => {
         .leftJoin(schema_1.foodVariations, (0, drizzle_orm_1.eq)(schema_1.food.id, schema_1.foodVariations.foodId))
         .leftJoin(schema_1.variationOptions, (0, drizzle_orm_1.eq)(schema_1.foodVariations.id, schema_1.variationOptions.variationId))
         .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_1.food.restaurantid, restaurantId), (0, drizzle_orm_1.eq)(schema_1.food.status, "active")));
-    // 3. 💡 التريكة الاحترافية: تجميع البيانات (Grouping) لتكوين شجرة JSON متكاملة للفرونت إند
     const groupedMenuObj = rawMenu.reduce((acc, row) => {
-        const catName = row.categoryName || "أخرى";
-        // لو الكاتيجوري مش موجود، نكريته
+        const catName = row.categoryName || "Other";
         if (!acc[catName])
             acc[catName] = {};
-        // لو الأكلة مش موجودة جوه الكاتيجوري، نكريتها ونجهز مصفوفة للفارييشنز
         if (!acc[catName][row.foodId]) {
             acc[catName][row.foodId] = {
                 id: row.foodId,
@@ -129,10 +160,10 @@ const getRestaurantDetails = async (req, res) => {
                 description: row.description,
                 price: row.price,
                 image: row.image,
-                variations: {} // هنستخدم Object مؤقتاً عشان نمنع التكرار
+                isFavorite: userId ? favoriteFoodIds.has(row.foodId) : false,
+                variations: {}
             };
         }
-        // لو الأكلة ليها فارييشن (Variations)
         if (row.variationId) {
             if (!acc[catName][row.foodId].variations[row.variationId]) {
                 acc[catName][row.foodId].variations[row.variationId] = {
@@ -142,10 +173,9 @@ const getRestaurantDetails = async (req, res) => {
                     selectionType: row.selectionType,
                     min: row.min,
                     max: row.max,
-                    options: [] // مصفوفة الخيارات
+                    options: []
                 };
             }
-            // لو الفارييشن ليه خيارات (Options)
             if (row.optionId) {
                 acc[catName][row.foodId].variations[row.variationId].options.push({
                     id: row.optionId,
@@ -156,62 +186,47 @@ const getRestaurantDetails = async (req, res) => {
         }
         return acc;
     }, {});
-    // 4. تحويل الـ Objects الداخلية لـ Arrays عشان الفرونت إند يعرف يعمل عليها .map()
     const finalMenu = {};
     for (const [category, foodsObj] of Object.entries(groupedMenuObj)) {
-        finalMenu[category] = Object.values(foodsObj).map((foodItem) => {
-            // تحويل الفارييشنز من Object لـ Array
-            foodItem.variations = Object.values(foodItem.variations);
-            return foodItem;
+        finalMenu[category] = Object.values(foodsObj).map((f) => {
+            f.variations = Object.values(f.variations);
+            return f;
         });
     }
     return (0, response_1.SuccessResponse)(res, {
         data: {
-            restaurant: restaurantInfo,
+            restaurant: restaurantWithFav,
             menu: finalMenu
         }
     });
 };
 exports.getRestaurantDetails = getRestaurantDetails;
 // ==========================================
-// 5. إضافة/إزالة المطعم من المفضلة (زرار القلب)
+// 5. Toggle Favorite
 // ==========================================
 const toggleFavorite = async (req, res) => {
-    try {
-        if (!req.user)
-            throw new Errors_1.UnauthorizedError("Unauthenticated");
-        const userId = req.user.id;
-        const { restaurantId, foodId } = req.body;
-        if (!restaurantId && !foodId) {
-            throw new Errors_1.BadRequest("Restaurant ID or Food ID is required");
-        }
-        if (restaurantId && foodId) {
-            throw new Errors_1.BadRequest("Send only one of restaurantId or foodId");
-        }
-        // بناء الشرط بناءً على النوع
-        const condition = restaurantId
-            ? (0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_1.favorites.userId, userId), (0, drizzle_orm_1.eq)(schema_1.favorites.restaurantId, restaurantId))
-            : (0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_1.favorites.userId, userId), (0, drizzle_orm_1.eq)(schema_1.favorites.foodId, foodId));
-        // الخطأ بيحصل في السطر ده 👇
-        const existingFav = await connection_1.db.select().from(schema_1.favorites).where(condition).limit(1);
-        if (existingFav[0]) {
-            await connection_1.db.delete(schema_1.favorites).where((0, drizzle_orm_1.eq)(schema_1.favorites.id, existingFav[0].id));
-            return (0, response_1.SuccessResponse)(res, { message: "تمت الإزالة من المفضلة", isFavorite: false });
-        }
-        else {
-            await connection_1.db.insert(schema_1.favorites).values({
-                userId,
-                restaurantId: restaurantId ? restaurantId : null,
-                foodId: foodId ? foodId : null
-            });
-            return (0, response_1.SuccessResponse)(res, { message: "تمت الإضافة للمفضلة", isFavorite: true });
-        }
+    if (!req.user)
+        throw new Errors_1.UnauthorizedError("Unauthenticated");
+    const userId = req.user.id;
+    const { restaurantId, foodId } = req.body;
+    if (!restaurantId && !foodId)
+        throw new Errors_1.BadRequest("Restaurant ID or Food ID is required");
+    if (restaurantId && foodId)
+        throw new Errors_1.BadRequest("Send only one");
+    const condition = restaurantId
+        ? (0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_1.favorites.userId, userId), (0, drizzle_orm_1.eq)(schema_1.favorites.restaurantId, restaurantId))
+        : (0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_1.favorites.userId, userId), (0, drizzle_orm_1.eq)(schema_1.favorites.foodId, foodId));
+    const [existingFav] = await connection_1.db.select().from(schema_1.favorites).where(condition);
+    if (existingFav) {
+        await connection_1.db.delete(schema_1.favorites).where((0, drizzle_orm_1.eq)(schema_1.favorites.id, existingFav.id));
+        return (0, response_1.SuccessResponse)(res, { isFavorite: false });
     }
-    catch (error) {
-        // السطر ده هيقولنا مين العمود أو الجدول اللي مش موجود
-        console.error("🔥🔥 MYSQL SELECT ERROR: ", error);
-        throw error;
-    }
+    await connection_1.db.insert(schema_1.favorites).values({
+        userId,
+        restaurantId: restaurantId || null,
+        foodId: foodId || null
+    });
+    return (0, response_1.SuccessResponse)(res, { isFavorite: true });
 };
 exports.toggleFavorite = toggleFavorite;
 // ==========================================

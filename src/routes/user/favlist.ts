@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getUserFavorites, toggleFavorite } from "../../controllers/user/home";
+import {toggleFavorite, getUserFavorites } from "../../controllers/user/home";
 import { catchAsync } from "../../utils/catchAsync";
 const router = Router();
 
