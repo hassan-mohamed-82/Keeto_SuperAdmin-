@@ -262,26 +262,72 @@ exports.getFoodById = getFoodById;
 const updateFood = async (req, res) => {
     const { id } = req.params;
     const data = req.body;
-    const existingFood = await connection_1.db.select().from(schema_1.food).where((0, drizzle_orm_1.eq)(schema_1.food.id, id)).limit(1);
-    if (!existingFood[0])
-        throw new NotFound_1.NotFound("Food not found");
-    const updateData = { updatedAt: new Date() };
-    Object.keys(data).forEach(key => {
-        if (key !== 'variations') {
-            updateData[key] = data[key];
+    const restaurantId = req.user?.id;
+    if (!restaurantId) {
+        throw new BadRequest_1.BadRequest("Restaurant ID missing or unauthorized");
+    }
+    // ✅ تأكد إن الأكلة تخص نفس الريستورانت
+    const existingFood = await connection_1.db
+        .select()
+        .from(schema_1.food)
+        .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_1.food.id, id), (0, drizzle_orm_1.eq)(schema_1.food.restaurantid, restaurantId)))
+        .limit(1);
+    if (!existingFood[0]) {
+        throw new NotFound_1.NotFound("Food not found or you don't have permission to edit it");
+    }
+    // ✅ الحقول المسموح بتحديثها فقط (Clean Code + Security)
+    const allowedFields = [
+        "name",
+        "nameAr",
+        "nameFr",
+        "description",
+        "descriptionAr",
+        "descriptionFr",
+        "price",
+        "categoryId",
+        "isAvailable",
+        "image"
+    ];
+    const updateData = {
+        updatedAt: new Date(), // ✅ دايمًا Date object
+    };
+    for (const key of allowedFields) {
+        if (data[key] !== undefined) {
+            // 🖼️ معالجة الصورة
+            if (key === "image" &&
+                data[key] &&
+                typeof data[key] === "string" &&
+                data[key].startsWith("data:image")) {
+                updateData[key] = await (0, handleImages_1.handleImageUpdate)(req, existingFood[0].image, data[key], "foods");
+            }
+            else {
+                updateData[key] = data[key];
+            }
         }
-    });
+    }
+    // ✅ تنفيذ التحديث
     await connection_1.db.update(schema_1.food).set(updateData).where((0, drizzle_orm_1.eq)(schema_1.food.id, id));
+    // ===========================
+    // ✅ Variations Update
+    // ===========================
     if (data.variations && Array.isArray(data.variations)) {
-        const oldVars = await connection_1.db.select().from(schema_1.foodVariations).where((0, drizzle_orm_1.eq)(schema_1.foodVariations.foodId, id));
+        const oldVars = await connection_1.db
+            .select()
+            .from(schema_1.foodVariations)
+            .where((0, drizzle_orm_1.eq)(schema_1.foodVariations.foodId, id));
+        // حذف options القديمة
         for (const v of oldVars) {
-            await connection_1.db.delete(schema_1.variationOptions).where((0, drizzle_orm_1.eq)(schema_1.variationOptions.variationId, v.id));
+            await connection_1.db
+                .delete(schema_1.variationOptions)
+                .where((0, drizzle_orm_1.eq)(schema_1.variationOptions.variationId, v.id));
         }
-        await connection_1.db.delete(schema_1.foodVariations).where((0, drizzle_orm_1.eq)(schema_1.foodVariations.foodId, id));
+        // حذف variations القديمة
+        await connection_1.db
+            .delete(schema_1.foodVariations)
+            .where((0, drizzle_orm_1.eq)(schema_1.foodVariations.foodId, id));
+        // إضافة الجديدة
         for (const variation of data.variations) {
             const variationId = (0, uuid_1.v4)();
-            if (!variation.nameAr || !variation.nameFr)
-                throw new BadRequest_1.BadRequest("Variation nameAr, nameFr are required");
             await connection_1.db.insert(schema_1.foodVariations).values({
                 id: variationId,
                 foodId: id,
@@ -290,25 +336,27 @@ const updateFood = async (req, res) => {
                 nameFr: variation.nameFr,
                 isRequired: variation.isRequired || false,
                 selectionType: variation.selectionType || "single",
-                min: variation.min || null,
-                max: variation.max || null,
+                min: variation.min ?? null,
+                max: variation.max ?? null,
             });
-            if (variation.options) {
+            if (variation.options && Array.isArray(variation.options)) {
                 for (const option of variation.options) {
-                    if (!option.optionNameAr || !option.optionNameFr)
-                        throw new BadRequest_1.BadRequest("Option optionNameAr, optionNameFr are required");
                     await connection_1.db.insert(schema_1.variationOptions).values({
                         variationId,
                         optionName: option.optionName,
                         optionNameAr: option.optionNameAr,
                         optionNameFr: option.optionNameFr,
-                        additionalPrice: option.additionalPrice?.toString() || "0",
+                        additionalPrice: option.additionalPrice
+                            ? option.additionalPrice.toString()
+                            : "0",
                     });
                 }
             }
         }
     }
-    return (0, response_1.SuccessResponse)(res, { message: "Update food success" });
+    return (0, response_1.SuccessResponse)(res, {
+        message: "Update food success",
+    });
 };
 exports.updateFood = updateFood;
 // =============================================

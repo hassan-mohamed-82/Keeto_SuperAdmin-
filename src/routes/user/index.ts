@@ -13,11 +13,11 @@ import favlistRouter from "./favlist";
 import restaurantFeaturesRouter from "./restaurantFeatures";
 
 const router = Router();
-router.use("/restaurants", restaurantFeaturesRouter);
 router.use("/home", homeRouter);
 router.use("/auth", authRouter);
 router.use(authenticated,authorizeRoles("user"));
 router.use("/profile", profileRouter);
+router.use("/restaurants", restaurantFeaturesRouter);
 router.use("/order", orderRouter);
 router.use("/address", addressRouter);
 router.use("/cart", cartRouter);

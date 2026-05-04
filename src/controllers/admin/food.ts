@@ -9,12 +9,12 @@ import {
     subcategories,
     addons,
 } from "../../models/schema";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, and } from "drizzle-orm";
 import { SuccessResponse } from "../../utils/response";
 import { NotFound } from "../../Errors/NotFound";
 import { BadRequest } from "../../Errors/BadRequest";
 import { v4 as uuidv4 } from "uuid";
-import { saveBase64Image } from "../../utils/handleImages";
+import { saveBase64Image, handleImageUpdate } from "../../utils/handleImages";
 
 // =============================================
 // CREATE Food
@@ -298,32 +298,93 @@ export const getFoodById = async (req: Request, res: Response) => {
 export const updateFood = async (req: Request, res: Response) => {
     const { id } = req.params;
     const data = req.body;
+    const restaurantId = req.user?.id;
 
-    const existingFood = await db.select().from(food).where(eq(food.id, id)).limit(1);
-    if (!existingFood[0]) throw new NotFound("Food not found");
+    if (!restaurantId) {
+        throw new BadRequest("Restaurant ID missing or unauthorized");
+    }
 
-    const updateData: any = { updatedAt: new Date() };
+    // ✅ تأكد إن الأكلة تخص نفس الريستورانت
+    const existingFood = await db
+        .select()
+        .from(food)
+        .where(and(eq(food.id, id), eq(food.restaurantid, restaurantId)))
+        .limit(1);
 
-    Object.keys(data).forEach(key => {
-        if (key !== 'variations') {
-            updateData[key] = data[key];
+    if (!existingFood[0]) {
+        throw new NotFound("Food not found or you don't have permission to edit it");
+    }
+
+    // ✅ الحقول المسموح بتحديثها فقط (Clean Code + Security)
+    const allowedFields = [
+        "name",
+        "nameAr",
+        "nameFr",
+        "description",
+        "descriptionAr",
+        "descriptionFr",
+        "price",
+        "categoryId",
+        "isAvailable",
+        "image"
+    ];
+
+    const updateData: any = {
+        updatedAt: new Date(), // ✅ دايمًا Date object
+    };
+
+    for (const key of allowedFields) {
+        if (data[key] !== undefined) {
+
+            // 🖼️ معالجة الصورة
+            if (
+                key === "image" &&
+                data[key] &&
+                typeof data[key] === "string" &&
+                data[key].startsWith("data:image")
+            ) {
+                updateData[key] = await handleImageUpdate(
+                    req,
+                    existingFood[0].image,
+                    data[key],
+                    "foods"
+                );
+            } 
+            else {
+                updateData[key] = data[key];
+            }
         }
-    });
+    }
 
+    // ✅ تنفيذ التحديث
     await db.update(food).set(updateData).where(eq(food.id, id));
 
+    // ===========================
+    // ✅ Variations Update
+    // ===========================
     if (data.variations && Array.isArray(data.variations)) {
-        const oldVars = await db.select().from(foodVariations).where(eq(foodVariations.foodId, id));
 
+        const oldVars = await db
+            .select()
+            .from(foodVariations)
+            .where(eq(foodVariations.foodId, id));
+
+        // حذف options القديمة
         for (const v of oldVars) {
-            await db.delete(variationOptions).where(eq(variationOptions.variationId, v.id));
+            await db
+                .delete(variationOptions)
+                .where(eq(variationOptions.variationId, v.id));
         }
 
-        await db.delete(foodVariations).where(eq(foodVariations.foodId, id));
+        // حذف variations القديمة
+        await db
+            .delete(foodVariations)
+            .where(eq(foodVariations.foodId, id));
 
+        // إضافة الجديدة
         for (const variation of data.variations) {
+
             const variationId = uuidv4();
-            if(!variation.nameAr || !variation.nameFr) throw new BadRequest("Variation nameAr, nameFr are required");
 
             await db.insert(foodVariations).values({
                 id: variationId,
@@ -333,26 +394,29 @@ export const updateFood = async (req: Request, res: Response) => {
                 nameFr: variation.nameFr,
                 isRequired: variation.isRequired || false,
                 selectionType: variation.selectionType || "single",
-                min: variation.min || null,
-                max: variation.max || null,
+                min: variation.min ?? null,
+                max: variation.max ?? null,
             });
 
-            if (variation.options) {
+            if (variation.options && Array.isArray(variation.options)) {
                 for (const option of variation.options) {
-                    if(!option.optionNameAr || !option.optionNameFr) throw new BadRequest("Option optionNameAr, optionNameFr are required");
                     await db.insert(variationOptions).values({
                         variationId,
                         optionName: option.optionName,
                         optionNameAr: option.optionNameAr,
                         optionNameFr: option.optionNameFr,
-                        additionalPrice: option.additionalPrice?.toString() || "0",
+                        additionalPrice: option.additionalPrice
+                            ? option.additionalPrice.toString()
+                            : "0",
                     });
                 }
             }
         }
     }
 
-    return SuccessResponse(res, { message: "Update food success" });
+    return SuccessResponse(res, {
+        message: "Update food success",
+    });
 };
 
 // =============================================
