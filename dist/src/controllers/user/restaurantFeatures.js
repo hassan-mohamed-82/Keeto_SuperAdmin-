@@ -3,19 +3,29 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getHomeRestaurants = exports.toggleAddHome = exports.searchRestaurants = void 0;
 const connection_1 = require("../../models/connection");
 const schema_1 = require("../../models/schema");
-const drizzle_orm_1 = require("drizzle-orm");
+const schema_2 = require("../../models/schema"); // 👈 تأكد من مسار جدول المفضلة
+const drizzle_orm_1 = require("drizzle-orm"); // 👈 ضفنا getTableColumns, sql, and
 const response_1 = require("../../utils/response");
 const Errors_1 = require("../../Errors");
 // 1. Search for restaurants
 const searchRestaurants = async (req, res) => {
     const { query } = req.query;
+    // 👈 هتحتاج تجيب الـ ID بتاع اليوزر الحالي (مثال من الـ middleware)
+    const userId = req.user?.id; // عدلها حسب ما بتخزن اليوزر في الـ Request عندك
+    if (!userId)
+        throw new Errors_1.UnauthorizedError("Unauthenticated");
     if (!query || typeof query !== "string") {
         throw new Errors_1.BadRequest("Search query is required");
     }
     const searchTerm = `%${query}%`;
     const results = await connection_1.db
-        .select()
+        .select({
+        ...(0, drizzle_orm_1.getTableColumns)(schema_1.restaurants), // بيرجع كل بيانات المطعم في مستوى واحد
+        isFavorite: (0, drizzle_orm_1.sql) `CASE WHEN ${schema_2.favorites.id} IS NOT NULL THEN true ELSE false END`.as('isFavorite')
+    })
         .from(schema_1.restaurants)
+        .leftJoin(schema_2.favorites, (0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_2.favorites.restaurantId, schema_1.restaurants.id), (0, drizzle_orm_1.eq)(schema_2.favorites.userId, userId) // بنربط برقم اليوزر عشان نتأكد إن ده مفضلة اليوزر الحالي بس
+    ))
         .where((0, drizzle_orm_1.or)((0, drizzle_orm_1.like)(schema_1.restaurants.name, searchTerm), (0, drizzle_orm_1.like)(schema_1.restaurants.nameAr, searchTerm), (0, drizzle_orm_1.like)(schema_1.restaurants.nameFr, searchTerm)));
     return (0, response_1.SuccessResponse)(res, { message: "Search results", data: results });
 };
@@ -43,9 +53,17 @@ const toggleAddHome = async (req, res) => {
 exports.toggleAddHome = toggleAddHome;
 // 3. Get all restaurants that are added to home
 const getHomeRestaurants = async (req, res) => {
+    // 👈 هتحتاج تجيب الـ ID بتاع اليوزر الحالي برضه
+    const userId = req.user?.id;
+    if (!userId)
+        throw new Errors_1.UnauthorizedError("Unauthenticated");
     const results = await connection_1.db
-        .select()
+        .select({
+        ...(0, drizzle_orm_1.getTableColumns)(schema_1.restaurants),
+        isFavorite: (0, drizzle_orm_1.sql) `CASE WHEN ${schema_2.favorites.id} IS NOT NULL THEN true ELSE false END`.as('isFavorite')
+    })
         .from(schema_1.restaurants)
+        .leftJoin(schema_2.favorites, (0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_2.favorites.restaurantId, schema_1.restaurants.id), (0, drizzle_orm_1.eq)(schema_2.favorites.userId, userId)))
         .where((0, drizzle_orm_1.eq)(schema_1.restaurants.addhome, true));
     return (0, response_1.SuccessResponse)(res, { message: "Home restaurants fetched successfully", data: results });
 };
