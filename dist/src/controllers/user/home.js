@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getUserFavorites = exports.toggleFavorite = exports.getRestaurantDetails = exports.getFoodsByCategory = exports.getRestaurantsByCuisine = exports.getHomeScreen = void 0;
+exports.searchRestaurantWithMenu = exports.getUserFavorites = exports.toggleFavorite = exports.getRestaurantDetails = exports.getFoodsByCategory = exports.getRestaurantsByCuisine = exports.getHomeScreen = void 0;
 const connection_1 = require("../../models/connection");
 const schema_1 = require("../../models/schema");
 const drizzle_orm_1 = require("drizzle-orm");
@@ -269,3 +269,67 @@ const getUserFavorites = async (req, res) => {
     return (0, response_1.SuccessResponse)(res, { data: result });
 };
 exports.getUserFavorites = getUserFavorites;
+const searchRestaurantWithMenu = async (req, res) => {
+    const { query } = req.query;
+    if (!query || typeof query !== "string") {
+        throw new Errors_1.BadRequest("من فضلك أدخل كلمة البحث");
+    }
+    const searchTerm = `%${query}%`;
+    // 1. هنجيب الداتا كلها مسطحة باستخدام الـ Joins
+    const flatResults = await connection_1.db
+        .select({
+        restaurant: schema_1.restaurants,
+        food: schema_1.food,
+        variation: schema_1.foodVariations,
+        option: schema_1.variationOptions
+    })
+        .from(schema_1.restaurants)
+        .leftJoin(schema_1.food, (0, drizzle_orm_1.eq)(schema_1.restaurants.id, schema_1.food.restaurantid))
+        .leftJoin(schema_1.foodVariations, (0, drizzle_orm_1.eq)(schema_1.food.id, schema_1.foodVariations.foodId))
+        .leftJoin(schema_1.variationOptions, (0, drizzle_orm_1.eq)(schema_1.foodVariations.id, schema_1.variationOptions.variationId))
+        .where((0, drizzle_orm_1.or)((0, drizzle_orm_1.like)(schema_1.restaurants.name, searchTerm), (0, drizzle_orm_1.like)(schema_1.restaurants.nameAr, searchTerm), (0, drizzle_orm_1.like)(schema_1.restaurants.nameFr, searchTerm)));
+    // 2. تجميع الداتا (Grouping) عشان نرجعها متداخلة ومرتبة
+    const restaurantsMap = new Map();
+    for (const row of flatResults) {
+        const r = row.restaurant;
+        const f = row.food;
+        const v = row.variation;
+        const o = row.option;
+        // لو المطعم مش موجود في الماب، ضيفه وضيف جواه ماب للأكل
+        if (!restaurantsMap.has(r.id)) {
+            restaurantsMap.set(r.id, { ...r, food: new Map() });
+        }
+        const currentRestaurant = restaurantsMap.get(r.id);
+        // لو فيه أكل تبع المطعم ده
+        if (f) {
+            if (!currentRestaurant.food.has(f.id)) {
+                currentRestaurant.food.set(f.id, { ...f, variations: new Map() });
+            }
+            const currentFood = currentRestaurant.food.get(f.id);
+            // لو فيه فارييشن تبع الأكلة دي
+            if (v) {
+                if (!currentFood.variations.has(v.id)) {
+                    currentFood.variations.set(v.id, { ...v, options: [] });
+                }
+                const currentVariation = currentFood.variations.get(v.id);
+                // لو فيه أوبشن تبع الفارييشن ده
+                if (o) {
+                    currentVariation.options.push(o);
+                }
+            }
+        }
+    }
+    // 3. تحويل الماب لـ Array عشان يرجع كـ JSON سليم للفرونت إند
+    const formattedData = Array.from(restaurantsMap.values()).map(r => ({
+        ...r,
+        food: Array.from(r.food.values()).map((f) => ({
+            ...f,
+            variations: Array.from(f.variations.values()) // الفارييشنز وجواها الـ options كـ array
+        }))
+    }));
+    return (0, response_1.SuccessResponse)(res, {
+        message: "Fetched restaurant and menu data successfully",
+        data: formattedData
+    });
+};
+exports.searchRestaurantWithMenu = searchRestaurantWithMenu;
