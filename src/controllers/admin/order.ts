@@ -1,8 +1,10 @@
 import { eq, desc, and } from "drizzle-orm";
-import { orders, users } from "../../models/schema";
+import { addresses, orders, users } from "../../models/schema";
 import { SuccessResponse } from "../../utils/response";
 import { Request, Response } from "express";
 import { db } from "../../models/connection";
+import { NotFound } from "../../Errors";
+
 export const getOrdersByRestaurant = async (req: Request, res: Response) => {
     const { restaurantId } = req.params; // الأيدي بتاع المطعم اللي باعتينه في اللينك
     const { status } = req.query; // لو عايز تفلتر بـ Pending أو Delivered مثلاً
@@ -35,3 +37,50 @@ export const getOrdersByRestaurant = async (req: Request, res: Response) => {
     });
 };
 
+
+
+export const getOrderDetails = async (req: Request, res: Response) => {
+    // 👈 هنجيب الـ orderId والـ restaurantId من الـ params
+    const { orderId, restaurantId } = req.params; 
+
+    const result = await db
+        .select({
+            orderNumber: orders.orderNumber,
+            internalId: orders.id,
+            restaurantId: orders.restaurantId, // 👈 ضفنا الـ restaurantId في النتيجة برضه لو محتاجه
+            orderDate: orders.createdAt,
+            totalAmount: orders.totalAmount,
+            orderStatus: orders.status,
+            
+            customerName: users.name,
+            customerPhone: users.phone,
+            
+            addressTitle: addresses.title,
+            street: addresses.street,
+            buildingNumber: addresses.number,
+            floor: addresses.floor,
+            lat: addresses.lat,
+            lng: addresses.lng,
+        })
+        .from(orders)
+        .leftJoin(users, eq(orders.userId, users.id))
+        .leftJoin(addresses, eq(orders.addressId, addresses.id)) 
+        .where(
+            // 👈 شرط الأمان: لازم الـ id بتاع الأوردر يطابق، وكمان يكون تبع المطعم ده
+            and(
+                eq(orders.id, orderId),
+                eq(orders.restaurantId, restaurantId)
+            )
+        )
+        .limit(1);
+
+    if (!result || result.length === 0) {
+        // رسالة الخطأ دلوقتي بتغطي الحالتين (مش موجود أصلاً، أو موجود بس بتاع مطعم تاني)
+        throw new NotFound("الأوردر غير موجود أو لا يتبع هذا المطعم");
+    }
+
+    return SuccessResponse(res, { 
+        message: "تم جلب تفاصيل الأوردر بنجاح", 
+        data: result[0] 
+    });
+};
