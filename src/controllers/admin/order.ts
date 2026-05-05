@@ -32,7 +32,7 @@ export const getOrdersByRestaurant = async (req: Request, res: Response) => {
     const result = await baseQuery.where(condition).orderBy(desc(orders.createdAt));
 
     return SuccessResponse(res, { 
-        message: "تم جلب طلبات المطعم بنجاح", 
+        message: "Fetched restaurant orders successfully", 
         data: result 
     });
 };
@@ -76,11 +76,11 @@ export const getOrderDetails = async (req: Request, res: Response) => {
 
     if (!result || result.length === 0) {
         // رسالة الخطأ دلوقتي بتغطي الحالتين (مش موجود أصلاً، أو موجود بس بتاع مطعم تاني)
-        throw new NotFound("الأوردر غير موجود أو لا يتبع هذا المطعم");
+        throw new NotFound("Order not found");
     }
 
-    return SuccessResponse(res, { 
-        message: "تم جلب تفاصيل الأوردر بنجاح", 
+    return SuccessResponse(res, {
+        message: "Order details fetched successfully", 
         data: result[0] 
     });
 };

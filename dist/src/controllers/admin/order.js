@@ -29,7 +29,7 @@ const getOrdersByRestaurant = async (req, res) => {
     }
     const result = await baseQuery.where(condition).orderBy((0, drizzle_orm_1.desc)(schema_1.orders.createdAt));
     return (0, response_1.SuccessResponse)(res, {
-        message: "تم جلب طلبات المطعم بنجاح",
+        message: "Fetched restaurant orders successfully",
         data: result
     });
 };
@@ -63,10 +63,10 @@ const getOrderDetails = async (req, res) => {
         .limit(1);
     if (!result || result.length === 0) {
         // رسالة الخطأ دلوقتي بتغطي الحالتين (مش موجود أصلاً، أو موجود بس بتاع مطعم تاني)
-        throw new Errors_1.NotFound("الأوردر غير موجود أو لا يتبع هذا المطعم");
+        throw new Errors_1.NotFound("Order not found");
     }
     return (0, response_1.SuccessResponse)(res, {
-        message: "تم جلب تفاصيل الأوردر بنجاح",
+        message: "Order details fetched successfully",
         data: result[0]
     });
 };
