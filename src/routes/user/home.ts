@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-// استيراد الدوال من الكنترولر بتاع الـ Explore اللي عملناه
+// استيراد الدوال من الكنترولر بتاع الـ  اللي عملناه
 import { 
     getHomeScreen, 
     getRestaurantsByCuisine, 
@@ -23,6 +23,8 @@ const router = Router();
 // 🏠 راوتس التصفح والشاشة الرئيسية (Explore & Home)
 // ==========================================
 
+router.get("/search", catchAsync(searchRestaurantWithMenu));
+
 // 1. جلب الشاشة الرئيسية (المطابخ، الفئات، المطاعم)
 // 🟢 GET: /api/user/explore/
 router.get("/", catchAsync(getHomeScreen));
@@ -39,19 +41,13 @@ router.get("/categories/:categoryId/items", catchAsync(getFoodsByCategory));
 // 🟢 GET: /api/user/explore/restaurants/:restaurantId
 router.get("/restaurants/:restaurantId", catchAsync(getRestaurantDetails));
 
-
 // ==========================================
 // 🔍 راوتس البحث (Search)
-// ==========================================
+// =========================================
 
 // 5. البحث عن مطعم بالاسم مع جلب المنيو (اللي لسه عاملينها)
 // 🟢 GET: /api/user/explore/search?query=kfc
-router.get("/search", catchAsync(searchRestaurantWithMenu));
 
-
-// ==========================================
-// ❤️ راوتس المفضلة (Favorites)
-// ==========================================
 
 // 6. جلب قائمة المفضلة الخاصة باليوزر
 // 🟢 GET: /api/user/explore/favorites
