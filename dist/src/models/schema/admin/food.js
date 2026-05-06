@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.food = void 0;
+exports.foodRelations = exports.food = void 0;
 const mysql_core_1 = require("drizzle-orm/mysql-core");
 const drizzle_orm_1 = require("drizzle-orm");
 const schema_1 = require("../../schema");
@@ -36,3 +36,10 @@ exports.food = (0, mysql_core_1.mysqlTable)("food", {
     createdAt: (0, mysql_core_1.timestamp)("created_at").defaultNow(),
     updatedAt: (0, mysql_core_1.timestamp)("updated_at").defaultNow().onUpdateNow(),
 });
+exports.foodRelations = (0, drizzle_orm_1.relations)(exports.food, ({ one, many }) => ({
+    restaurant: one(schema_1.restaurants, {
+        fields: [exports.food.restaurantid],
+        references: [schema_1.restaurants.id],
+    }),
+    variations: many(schema_1.foodVariations),
+}));

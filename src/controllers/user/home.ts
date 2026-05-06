@@ -333,14 +333,20 @@ export const searchRestaurantWithMenu = async (req: Request, res: Response) => {
             option: variationOptions
         })
         .from(restaurants)
-        .leftJoin(food, eq(restaurants.id, food.restaurantid))
+        .leftJoin(food, and(
+            eq(restaurants.id, food.restaurantid),
+            eq(food.status, "active")
+        ))
         .leftJoin(foodVariations, eq(food.id, foodVariations.foodId))
         .leftJoin(variationOptions, eq(foodVariations.id, variationOptions.variationId))
         .where(
-            or(
-                like(restaurants.name, searchTerm),
-                like(restaurants.nameAr, searchTerm),
-                like(restaurants.nameFr, searchTerm)
+            and(
+                eq(restaurants.status, "active"),
+                or(
+                    like(restaurants.name, searchTerm),
+                    like(restaurants.nameAr, searchTerm),
+                    like(restaurants.nameFr, searchTerm)
+                )
             )
         );
 
@@ -353,6 +359,8 @@ export const searchRestaurantWithMenu = async (req: Request, res: Response) => {
         const v = row.variation;
         const o = row.option;
 
+        if (!r || !r.id) continue;
+
         // لو المطعم مش موجود في الماب، ضيفه وضيف جواه ماب للأكل
         if (!restaurantsMap.has(r.id)) {
             restaurantsMap.set(r.id, { ...r, food: new Map() });
@@ -360,22 +368,26 @@ export const searchRestaurantWithMenu = async (req: Request, res: Response) => {
         const currentRestaurant = restaurantsMap.get(r.id);
 
         // لو فيه أكل تبع المطعم ده
-        if (f) {
+        if (f && f.id) {
             if (!currentRestaurant.food.has(f.id)) {
-                currentRestaurant.food.set(f.id, { ...f, variations: new Map() });
+                // Remove or rename the original JSON variations to avoid conflict with our relation
+                const { variations, ...foodData } = f; 
+                currentRestaurant.food.set(f.id, { ...foodData, variations: new Map() });
             }
             const currentFood = currentRestaurant.food.get(f.id);
 
             // لو فيه فارييشن تبع الأكلة دي
-            if (v) {
+            if (v && v.id) {
                 if (!currentFood.variations.has(v.id)) {
                     currentFood.variations.set(v.id, { ...v, options: [] });
                 }
                 const currentVariation = currentFood.variations.get(v.id);
 
                 // لو فيه أوبشن تبع الفارييشن ده
-                if (o) {
-                    currentVariation.options.push(o);
+                if (o && o.id) {
+                    if (!currentVariation.options.some((opt: any) => opt.id === o.id)) {
+                        currentVariation.options.push(o);
+                    }
                 }
             }
         }

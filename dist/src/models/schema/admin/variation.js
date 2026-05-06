@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.variationOptions = exports.foodVariations = void 0;
+exports.optionRelations = exports.variationRelations = exports.variationOptions = exports.foodVariations = void 0;
 const mysql_core_1 = require("drizzle-orm/mysql-core"); // تأكد من استدعاء int
 const mysql_core_2 = require("drizzle-orm/mysql-core");
 const drizzle_orm_1 = require("drizzle-orm");
@@ -27,3 +27,17 @@ exports.variationOptions = (0, mysql_core_2.mysqlTable)("variation_options", {
     optionNameFr: (0, mysql_core_2.varchar)("option_name_fr", { length: 255 }).notNull().default(''),
     additionalPrice: (0, mysql_core_2.varchar)("additional_price", { length: 255 }).notNull().default("0"), // Additional price
 });
+const drizzle_orm_2 = require("drizzle-orm");
+exports.variationRelations = (0, drizzle_orm_2.relations)(exports.foodVariations, ({ one, many }) => ({
+    food: one(food_1.food, {
+        fields: [exports.foodVariations.foodId],
+        references: [food_1.food.id],
+    }),
+    options: many(exports.variationOptions),
+}));
+exports.optionRelations = (0, drizzle_orm_2.relations)(exports.variationOptions, ({ one }) => ({
+    variation: one(exports.foodVariations, {
+        fields: [exports.variationOptions.variationId],
+        references: [exports.foodVariations.id],
+    }),
+}));

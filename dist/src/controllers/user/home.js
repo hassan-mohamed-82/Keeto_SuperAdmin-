@@ -284,10 +284,10 @@ const searchRestaurantWithMenu = async (req, res) => {
         option: schema_1.variationOptions
     })
         .from(schema_1.restaurants)
-        .leftJoin(schema_1.food, (0, drizzle_orm_1.eq)(schema_1.restaurants.id, schema_1.food.restaurantid))
+        .leftJoin(schema_1.food, (0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_1.restaurants.id, schema_1.food.restaurantid), (0, drizzle_orm_1.eq)(schema_1.food.status, "active")))
         .leftJoin(schema_1.foodVariations, (0, drizzle_orm_1.eq)(schema_1.food.id, schema_1.foodVariations.foodId))
         .leftJoin(schema_1.variationOptions, (0, drizzle_orm_1.eq)(schema_1.foodVariations.id, schema_1.variationOptions.variationId))
-        .where((0, drizzle_orm_1.or)((0, drizzle_orm_1.like)(schema_1.restaurants.name, searchTerm), (0, drizzle_orm_1.like)(schema_1.restaurants.nameAr, searchTerm), (0, drizzle_orm_1.like)(schema_1.restaurants.nameFr, searchTerm)));
+        .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_1.restaurants.status, "active"), (0, drizzle_orm_1.or)((0, drizzle_orm_1.like)(schema_1.restaurants.name, searchTerm), (0, drizzle_orm_1.like)(schema_1.restaurants.nameAr, searchTerm), (0, drizzle_orm_1.like)(schema_1.restaurants.nameFr, searchTerm))));
     // 2. تجميع الداتا (Grouping) عشان نرجعها متداخلة ومرتبة
     const restaurantsMap = new Map();
     for (const row of flatResults) {
@@ -295,26 +295,32 @@ const searchRestaurantWithMenu = async (req, res) => {
         const f = row.food;
         const v = row.variation;
         const o = row.option;
+        if (!r || !r.id)
+            continue;
         // لو المطعم مش موجود في الماب، ضيفه وضيف جواه ماب للأكل
         if (!restaurantsMap.has(r.id)) {
             restaurantsMap.set(r.id, { ...r, food: new Map() });
         }
         const currentRestaurant = restaurantsMap.get(r.id);
         // لو فيه أكل تبع المطعم ده
-        if (f) {
+        if (f && f.id) {
             if (!currentRestaurant.food.has(f.id)) {
-                currentRestaurant.food.set(f.id, { ...f, variations: new Map() });
+                // Remove or rename the original JSON variations to avoid conflict with our relation
+                const { variations, ...foodData } = f;
+                currentRestaurant.food.set(f.id, { ...foodData, variations: new Map() });
             }
             const currentFood = currentRestaurant.food.get(f.id);
             // لو فيه فارييشن تبع الأكلة دي
-            if (v) {
+            if (v && v.id) {
                 if (!currentFood.variations.has(v.id)) {
                     currentFood.variations.set(v.id, { ...v, options: [] });
                 }
                 const currentVariation = currentFood.variations.get(v.id);
                 // لو فيه أوبشن تبع الفارييشن ده
-                if (o) {
-                    currentVariation.options.push(o);
+                if (o && o.id) {
+                    if (!currentVariation.options.some((opt) => opt.id === o.id)) {
+                        currentVariation.options.push(o);
+                    }
                 }
             }
         }

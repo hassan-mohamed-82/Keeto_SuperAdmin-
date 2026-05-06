@@ -37,3 +37,20 @@ export const variationOptions = mysqlTable("variation_options", {
     optionNameFr: varchar("option_name_fr", { length: 255 }).notNull().default(''),
     additionalPrice: varchar("additional_price", { length: 255 }).notNull().default("0"), // Additional price
 });
+
+import { relations } from "drizzle-orm";
+
+export const variationRelations = relations(foodVariations, ({ one, many }) => ({
+    food: one(food, {
+        fields: [foodVariations.foodId],
+        references: [food.id],
+    }),
+    options: many(variationOptions),
+}));
+
+export const optionRelations = relations(variationOptions, ({ one }) => ({
+    variation: one(foodVariations, {
+        fields: [variationOptions.variationId],
+        references: [foodVariations.id],
+    }),
+}));

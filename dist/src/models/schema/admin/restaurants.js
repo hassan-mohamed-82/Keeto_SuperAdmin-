@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.restaurants = void 0;
+exports.restaurantRelations = exports.restaurants = void 0;
 const mysql_core_1 = require("drizzle-orm/mysql-core");
 const drizzle_orm_1 = require("drizzle-orm");
 // ⚠️ تأكد من استيراد الجداول دي من مساراتها الصحيحة عندك
@@ -53,3 +53,8 @@ exports.restaurants = (0, mysql_core_1.mysqlTable)("restaurants", {
     createdAt: (0, mysql_core_1.timestamp)("created_at").defaultNow(),
     updatedAt: (0, mysql_core_1.timestamp)("updated_at").defaultNow().onUpdateNow(),
 });
+const drizzle_orm_2 = require("drizzle-orm");
+const schema_1 = require("../../schema");
+exports.restaurantRelations = (0, drizzle_orm_2.relations)(exports.restaurants, ({ many }) => ({
+    food: many(schema_1.food),
+}));

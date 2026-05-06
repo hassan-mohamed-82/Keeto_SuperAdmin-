@@ -10,8 +10,8 @@ import {
     boolean,
     text
 , longtext } from "drizzle-orm/mysql-core";
-import { sql } from "drizzle-orm";
-import { addons, categories, restaurants, subcategories } from "../../schema";
+import { relations, sql } from "drizzle-orm";
+import { addons, categories, foodVariations, restaurants, subcategories } from "../../schema";
 export const food = mysqlTable("food", {
     id: char("id", { length: 36 }).primaryKey().default(sql`(UUID())`),
     name: varchar("name", { length: 255 }).notNull(),
@@ -48,3 +48,12 @@ export const food = mysqlTable("food", {
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
 });
+
+
+export const foodRelations = relations(food, ({ one, many }) => ({
+    restaurant: one(restaurants, {
+        fields: [food.restaurantid],
+        references: [restaurants.id],
+    }),
+    variations: many(foodVariations),
+}));

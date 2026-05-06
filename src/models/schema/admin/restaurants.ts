@@ -72,3 +72,11 @@ export const restaurants = mysqlTable("restaurants", {
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
 });
+
+
+import { relations } from "drizzle-orm";
+import { food, foodVariations, variationOptions } from "../../schema";
+
+export const restaurantRelations = relations(restaurants, ({ many }) => ({
+    food: many(food),
+}));
