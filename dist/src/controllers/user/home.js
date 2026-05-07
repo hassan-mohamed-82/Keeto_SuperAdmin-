@@ -275,7 +275,7 @@ const searchRestaurantWithMenu = async (req, res) => {
         throw new Errors_1.BadRequest("من فضلك أدخل كلمة البحث");
     }
     const searchTerm = `%${query}%`;
-    // 1. هنجيب الداتا كلها مسطحة باستخدام الـ Joins
+    // 1. Fetch flat data
     const flatResults = await connection_1.db
         .select({
         restaurant: schema_1.restaurants,
@@ -288,7 +288,7 @@ const searchRestaurantWithMenu = async (req, res) => {
         .leftJoin(schema_1.foodVariations, (0, drizzle_orm_1.eq)(schema_1.food.id, schema_1.foodVariations.foodId))
         .leftJoin(schema_1.variationOptions, (0, drizzle_orm_1.eq)(schema_1.foodVariations.id, schema_1.variationOptions.variationId))
         .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_1.restaurants.status, "active"), (0, drizzle_orm_1.or)((0, drizzle_orm_1.like)(schema_1.restaurants.name, searchTerm), (0, drizzle_orm_1.like)(schema_1.restaurants.nameAr, searchTerm), (0, drizzle_orm_1.like)(schema_1.restaurants.nameFr, searchTerm))));
-    // 2. تجميع الداتا (Grouping) عشان نرجعها متداخلة ومرتبة
+    // 2. Grouping
     const restaurantsMap = new Map();
     for (const row of flatResults) {
         const r = row.restaurant;
@@ -297,40 +297,48 @@ const searchRestaurantWithMenu = async (req, res) => {
         const o = row.option;
         if (!r || !r.id)
             continue;
-        // لو المطعم مش موجود في الماب، ضيفه وضيف جواه ماب للأكل
+        // Restaurant
         if (!restaurantsMap.has(r.id)) {
-            restaurantsMap.set(r.id, { ...r, food: new Map() });
+            restaurantsMap.set(r.id, {
+                ...r,
+                food: new Map()
+            });
         }
         const currentRestaurant = restaurantsMap.get(r.id);
-        // لو فيه أكل تبع المطعم ده
+        // Food
         if (f && f.id) {
             if (!currentRestaurant.food.has(f.id)) {
-                // Remove or rename the original JSON variations to avoid conflict with our relation
-                const { variations, ...foodData } = f;
-                currentRestaurant.food.set(f.id, { ...foodData, variations: new Map() });
+                currentRestaurant.food.set(f.id, {
+                    ...f,
+                    variations: new Map()
+                });
             }
             const currentFood = currentRestaurant.food.get(f.id);
-            // لو فيه فارييشن تبع الأكلة دي
+            // Variation
             if (v && v.id) {
                 if (!currentFood.variations.has(v.id)) {
-                    currentFood.variations.set(v.id, { ...v, options: [] });
+                    currentFood.variations.set(v.id, {
+                        ...v,
+                        options: []
+                    });
                 }
                 const currentVariation = currentFood.variations.get(v.id);
-                // لو فيه أوبشن تبع الفارييشن ده
+                // Option
                 if (o && o.id) {
-                    if (!currentVariation.options.some((opt) => opt.id === o.id)) {
+                    const exists = currentVariation.options.some((opt) => opt.id === o.id);
+                    if (!exists) {
                         currentVariation.options.push(o);
                     }
                 }
             }
         }
     }
-    // 3. تحويل الماب لـ Array عشان يرجع كـ JSON سليم للفرونت إند
-    const formattedData = Array.from(restaurantsMap.values()).map(r => ({
-        ...r,
-        food: Array.from(r.food.values()).map((f) => ({
-            ...f,
-            variations: Array.from(f.variations.values()) // الفارييشنز وجواها الـ options كـ array
+    // 3. Convert Maps → Arrays
+    const formattedData = Array.from(restaurantsMap.values()).map((restaurant) => ({
+        ...restaurant,
+        food: Array.from(restaurant.food.values()).map((foodItem) => ({
+            ...foodItem,
+            variations: Array.from(foodItem.variations.values())
         }))
     }));
     return (0, response_1.SuccessResponse)(res, {

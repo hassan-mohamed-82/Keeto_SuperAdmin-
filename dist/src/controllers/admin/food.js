@@ -14,26 +14,57 @@ const handleImages_1 = require("../../utils/handleImages");
 // =============================================
 const createFood = async (req, res) => {
     const { name, nameAr, nameFr, description, descriptionAr, descriptionFr, image, restaurantid, categoryid, subcategoryid, foodtype, Nutrition, allergen_ingredients, is_Halal, addonsId, startTime, endTime, search_tags, price, discount_type, discount_value, Maximum_Purchase, stock_type, status, variations, } = req.body;
-    if (!name || !nameAr || !nameFr || !description || !descriptionAr || !descriptionFr || !image || !categoryid || !subcategoryid || !startTime || !endTime || !price) {
+    if (!name ||
+        !nameAr ||
+        !nameFr ||
+        !description ||
+        !descriptionAr ||
+        !descriptionFr ||
+        !image ||
+        !categoryid ||
+        !subcategoryid ||
+        !startTime ||
+        !endTime ||
+        !price) {
         throw new BadRequest_1.BadRequest("Missing required fields");
     }
-    const existingRestaurant = await connection_1.db.select().from(schema_1.restaurants).where((0, drizzle_orm_1.eq)(schema_1.restaurants.id, restaurantid)).limit(1);
-    if (!existingRestaurant[0])
+    const existingRestaurant = await connection_1.db
+        .select()
+        .from(schema_1.restaurants)
+        .where((0, drizzle_orm_1.eq)(schema_1.restaurants.id, restaurantid))
+        .limit(1);
+    if (!existingRestaurant[0]) {
         throw new BadRequest_1.BadRequest("Restaurant not found");
-    const existingCategory = await connection_1.db.select().from(schema_1.categories).where((0, drizzle_orm_1.eq)(schema_1.categories.id, categoryid)).limit(1);
-    if (!existingCategory[0])
-        throw new BadRequest_1.BadRequest("Category not found");
-    const existingSub = await connection_1.db.select().from(schema_1.subcategories).where((0, drizzle_orm_1.eq)(schema_1.subcategories.id, subcategoryid)).limit(1);
-    if (!existingSub[0])
-        throw new BadRequest_1.BadRequest("Subcategory not found");
-    if (addonsId) {
-        const existingAddon = await connection_1.db.select().from(schema_1.addons).where((0, drizzle_orm_1.eq)(schema_1.addons.id, addonsId)).limit(1);
-        if (!existingAddon[0])
-            throw new BadRequest_1.BadRequest("Addon not found");
     }
-    let imageUrl = undefined;
-    if (image) {
-        const result = await (0, handleImages_1.saveBase64Image)(req, image, "basiccampaign");
+    const existingCategory = await connection_1.db
+        .select()
+        .from(schema_1.categories)
+        .where((0, drizzle_orm_1.eq)(schema_1.categories.id, categoryid))
+        .limit(1);
+    if (!existingCategory[0]) {
+        throw new BadRequest_1.BadRequest("Category not found");
+    }
+    const existingSub = await connection_1.db
+        .select()
+        .from(schema_1.subcategories)
+        .where((0, drizzle_orm_1.eq)(schema_1.subcategories.id, subcategoryid))
+        .limit(1);
+    if (!existingSub[0]) {
+        throw new BadRequest_1.BadRequest("Subcategory not found");
+    }
+    if (addonsId) {
+        const existingAddon = await connection_1.db
+            .select()
+            .from(schema_1.addons)
+            .where((0, drizzle_orm_1.eq)(schema_1.addons.id, addonsId))
+            .limit(1);
+        if (!existingAddon[0]) {
+            throw new BadRequest_1.BadRequest("Addon not found");
+        }
+    }
+    let imageUrl = image;
+    if (image && image.startsWith("data:image")) {
+        const result = await (0, handleImages_1.saveBase64Image)(req, image, "foods");
         imageUrl = result.url;
     }
     const foodId = (0, uuid_1.v4)();
@@ -45,7 +76,7 @@ const createFood = async (req, res) => {
         description,
         descriptionAr,
         descriptionFr,
-        image,
+        image: imageUrl,
         restaurantid,
         categoryid,
         subcategoryid,
@@ -57,19 +88,17 @@ const createFood = async (req, res) => {
         startTime,
         endTime,
         search_tags: search_tags || null,
-        price,
+        price: price.toString(),
         discount_type: discount_type || "percentage",
-        discount_value: discount_value || null,
+        discount_value: discount_value?.toString() || null,
         Maximum_Purchase: Maximum_Purchase || null,
         stock_type: stock_type || "unlimited",
-        variations: variations || null,
         status: status || "active",
     });
+    // variations tables
     if (variations && Array.isArray(variations)) {
         for (const variation of variations) {
             const variationId = (0, uuid_1.v4)();
-            if (!variation.nameAr || !variation.nameFr)
-                throw new BadRequest_1.BadRequest("Variation nameAr, nameFr are required");
             await connection_1.db.insert(schema_1.foodVariations).values({
                 id: variationId,
                 foodId,
@@ -81,23 +110,26 @@ const createFood = async (req, res) => {
                 min: variation.min || null,
                 max: variation.max || null,
             });
-            if (variation.options && Array.isArray(variation.options)) {
+            if (variation.options &&
+                Array.isArray(variation.options)) {
                 for (const option of variation.options) {
-                    if (!option.optionNameAr || !option.optionNameFr)
-                        throw new BadRequest_1.BadRequest("Option optionNameAr, optionNameFr are required");
                     await connection_1.db.insert(schema_1.variationOptions).values({
                         variationId,
                         optionName: option.optionName,
                         optionNameAr: option.optionNameAr,
                         optionNameFr: option.optionNameFr,
-                        // ✅ FIX: decimal لازم string
                         additionalPrice: option.additionalPrice?.toString() || "0",
                     });
                 }
             }
         }
     }
-    return (0, response_1.SuccessResponse)(res, { message: "Create food success", data: { id: foodId } }, 201);
+    return (0, response_1.SuccessResponse)(res, {
+        message: "Create food success",
+        data: {
+            id: foodId
+        }
+    }, 201);
 };
 exports.createFood = createFood;
 // =============================================

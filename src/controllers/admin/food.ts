@@ -20,44 +20,8 @@ import { saveBase64Image, handleImageUpdate } from "../../utils/handleImages";
 // CREATE Food
 // =============================================
 export const createFood = async (req: Request, res: Response) => {
+
     const {
-        name, nameAr, nameFr, description, descriptionAr, descriptionFr, image,
-        restaurantid, categoryid, subcategoryid,
-        foodtype, Nutrition, allergen_ingredients, is_Halal,
-        addonsId, startTime, endTime, search_tags,
-        price, discount_type, discount_value, Maximum_Purchase, stock_type,
-        status,
-        variations,
-    } = req.body;
-
-    if (!name || !nameAr || !nameFr || !description || !descriptionAr || !descriptionFr || !image || !categoryid || !subcategoryid || !startTime || !endTime || !price) {
-        throw new BadRequest("Missing required fields");
-    }
-
-    const existingRestaurant = await db.select().from(restaurants).where(eq(restaurants.id, restaurantid)).limit(1);
-    if (!existingRestaurant[0]) throw new BadRequest("Restaurant not found");
-
-    const existingCategory = await db.select().from(categories).where(eq(categories.id, categoryid)).limit(1);
-    if (!existingCategory[0]) throw new BadRequest("Category not found");
-
-    const existingSub = await db.select().from(subcategories).where(eq(subcategories.id, subcategoryid)).limit(1);
-    if (!existingSub[0]) throw new BadRequest("Subcategory not found");
-
-    if (addonsId) {
-        const existingAddon = await db.select().from(addons).where(eq(addons.id, addonsId)).limit(1);
-        if (!existingAddon[0]) throw new BadRequest("Addon not found");
-    }
-    let imageUrl: string | undefined = undefined;
-
-    if (image) {
-        const result = await saveBase64Image(req, image, "basiccampaign");
-        imageUrl = result.url;
-    }
-
-    const foodId = uuidv4();
-
-    await db.insert(food).values({
-        id: foodId,
         name,
         nameAr,
         nameFr,
@@ -68,60 +32,215 @@ export const createFood = async (req: Request, res: Response) => {
         restaurantid,
         categoryid,
         subcategoryid,
-        foodtype: foodtype || "veg",
-        Nutrition: Nutrition || null,
-        allergen_ingredients: allergen_ingredients || null,
-        is_Halal: is_Halal ?? false,
-        addonsId: addonsId || null,
+        foodtype,
+        Nutrition,
+        allergen_ingredients,
+        is_Halal,
+        addonsId,
         startTime,
         endTime,
-        search_tags: search_tags || null,
+        search_tags,
         price,
-        discount_type: discount_type || "percentage",
-        discount_value: discount_value || null,
-        Maximum_Purchase: Maximum_Purchase || null,
-        stock_type: stock_type || "unlimited",
-        variations: variations || null,
-        status: status || "active",
+        discount_type,
+        discount_value,
+        Maximum_Purchase,
+        stock_type,
+        status,
+        variations,
+    } = req.body;
+
+    if (
+        !name ||
+        !nameAr ||
+        !nameFr ||
+        !description ||
+        !descriptionAr ||
+        !descriptionFr ||
+        !image ||
+        !categoryid ||
+        !subcategoryid ||
+        !startTime ||
+        !endTime ||
+        !price
+    ) {
+        throw new BadRequest("Missing required fields");
+    }
+
+    const existingRestaurant = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.id, restaurantid))
+        .limit(1);
+
+    if (!existingRestaurant[0]) {
+        throw new BadRequest("Restaurant not found");
+    }
+
+    const existingCategory = await db
+        .select()
+        .from(categories)
+        .where(eq(categories.id, categoryid))
+        .limit(1);
+
+    if (!existingCategory[0]) {
+        throw new BadRequest("Category not found");
+    }
+
+    const existingSub = await db
+        .select()
+        .from(subcategories)
+        .where(eq(subcategories.id, subcategoryid))
+        .limit(1);
+
+    if (!existingSub[0]) {
+        throw new BadRequest("Subcategory not found");
+    }
+
+    if (addonsId) {
+
+        const existingAddon = await db
+            .select()
+            .from(addons)
+            .where(eq(addons.id, addonsId))
+            .limit(1);
+
+        if (!existingAddon[0]) {
+            throw new BadRequest("Addon not found");
+        }
+    }
+
+    let imageUrl = image;
+
+    if (image && image.startsWith("data:image")) {
+
+        const result = await saveBase64Image(
+            req,
+            image,
+            "foods"
+        );
+
+        imageUrl = result.url;
+    }
+
+    const foodId = uuidv4();
+
+    await db.insert(food).values({
+        id: foodId,
+
+        name,
+        nameAr,
+        nameFr,
+
+        description,
+        descriptionAr,
+        descriptionFr,
+
+        image: imageUrl,
+
+        restaurantid,
+        categoryid,
+        subcategoryid,
+
+        foodtype: foodtype || "veg",
+
+        Nutrition: Nutrition || null,
+
+        allergen_ingredients:
+            allergen_ingredients || null,
+
+        is_Halal: is_Halal ?? false,
+
+        addonsId: addonsId || null,
+
+        startTime,
+        endTime,
+
+        search_tags: search_tags || null,
+
+        price: price.toString(),
+
+        discount_type:
+            discount_type || "percentage",
+
+        discount_value:
+            discount_value?.toString() || null,
+
+        Maximum_Purchase:
+            Maximum_Purchase || null,
+
+        stock_type:
+            stock_type || "unlimited",
+
+        status:
+            status || "active",
     });
 
+    // variations tables
     if (variations && Array.isArray(variations)) {
-        for (const variation of variations) {
-            const variationId = uuidv4();
 
-            if(!variation.nameAr || !variation.nameFr) throw new BadRequest("Variation nameAr, nameFr are required");
+        for (const variation of variations) {
+
+            const variationId = uuidv4();
 
             await db.insert(foodVariations).values({
                 id: variationId,
+
                 foodId,
+
                 name: variation.name,
+
                 nameAr: variation.nameAr,
+
                 nameFr: variation.nameFr,
-                isRequired: variation.isRequired || false,
-                selectionType: variation.selectionType || "single",
+
+                isRequired:
+                    variation.isRequired || false,
+
+                selectionType:
+                    variation.selectionType || "single",
+
                 min: variation.min || null,
+
                 max: variation.max || null,
             });
 
-            if (variation.options && Array.isArray(variation.options)) {
+            if (
+                variation.options &&
+                Array.isArray(variation.options)
+            ) {
+
                 for (const option of variation.options) {
-                    if(!option.optionNameAr || !option.optionNameFr) throw new BadRequest("Option optionNameAr, optionNameFr are required");
+
                     await db.insert(variationOptions).values({
                         variationId,
+
                         optionName: option.optionName,
-                        optionNameAr: option.optionNameAr,
-                        optionNameFr: option.optionNameFr,
-                        // ✅ FIX: decimal لازم string
-                        additionalPrice: option.additionalPrice?.toString() || "0",
+
+                        optionNameAr:
+                            option.optionNameAr,
+
+                        optionNameFr:
+                            option.optionNameFr,
+
+                        additionalPrice:
+                            option.additionalPrice?.toString() || "0",
                     });
                 }
             }
         }
     }
 
-    return SuccessResponse(res, { message: "Create food success", data: { id: foodId } }, 201);
+    return SuccessResponse(
+        res,
+        {
+            message: "Create food success",
+            data: {
+                id: foodId
+            }
+        },
+        201
+    );
 };
-
 // =============================================
 // GET ALL Foods (Optimized)
 // =============================================

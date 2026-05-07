@@ -42,7 +42,6 @@ export const food = mysqlTable("food", {
     Maximum_Purchase: int("Maximum_Purchase"),
     
     stock_type: mysqlEnum("stock_type", ["limited", "unlimited", "daily"]).default("unlimited"),
-    variations: json("variations"), // العمود ده موجود دلوقتي في الصورة سطر 21
 
     status: mysqlEnum("status", ["active", "inactive"]).default("active"),
     createdAt: timestamp("created_at").defaultNow(),
