@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const selectReasons_1 = require("../../controllers/admin/selectReasons");
+const catchAsync_1 = require("../../utils/catchAsync");
+const router = (0, express_1.Router)();
+router.post("/", (0, catchAsync_1.catchAsync)(selectReasons_1.createReason));
+router.get("/", (0, catchAsync_1.catchAsync)(selectReasons_1.getAllReasons));
+router.get("/:id", (0, catchAsync_1.catchAsync)(selectReasons_1.getReasonById));
+router.put("/:id", (0, catchAsync_1.catchAsync)(selectReasons_1.updateReason));
+router.delete("/:id", (0, catchAsync_1.catchAsync)(selectReasons_1.deleteReason));
+exports.default = router;
