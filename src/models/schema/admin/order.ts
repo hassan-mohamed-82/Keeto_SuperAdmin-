@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { restaurants } from "./restaurants";
 import { food } from "./food";
 import { users } from "../user/Users";
-import { paymentMethods } from "./payment_methodes";
+// تم مسح الـ import الخاص بـ paymentMethods
 import { branches } from "../../schema";
 import { addresses } from "../user/address";
 
@@ -31,9 +31,8 @@ export const orders = mysqlTable("orders", {
 
     orderSource: mysqlEnum("order_source", ["online_order", "food_aggregator"]).notNull(),
 
-    paymentMethodId: char("payment_method_id", { length: 36 })
-        .references(() => paymentMethods.id)
-        .notNull(),
+    // 👇 التعديل هنا: شلنا الربط وخليناها Enum بتلات قيم بس
+    paymentMethod: mysqlEnum("payment_method", ["cash_on_delivery", "visa", "wallet"]).notNull(),
 
     orderType: mysqlEnum("order_type", ["delivery", "takeaway", "dine_in"]).default("delivery"),
 
@@ -57,9 +56,10 @@ export const orders = mysqlTable("orders", {
 
     // 👇 وده حقل سبب الإلغاء عشان المطعم يكتبه
     cancelReason: text("cancel_reason"), 
-updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
     createdAt: timestamp("created_at").defaultNow(),
 });
+
 // ==========================================
 // 3. جدول أصناف الأوردر (Order Items)
 // ==========================================
