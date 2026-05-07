@@ -119,11 +119,26 @@ const getCart = async (req, res) => {
         .leftJoin(schema_1.restaurants, (0, drizzle_orm_1.eq)(schema_1.cartItems.restaurantId, schema_1.restaurants.id))
         .where((0, drizzle_orm_1.eq)(schema_1.cartItems.userId, userId));
     const formatted = await Promise.all(items.map(async (item) => {
-        const parsed = typeof item.variations === "string"
-            ? JSON.parse(item.variations)
-            : item.variations || [];
+        // ==============================
+        // ✅ FIX SAFE PARSING
+        // ==============================
+        let parsedVariations = [];
+        try {
+            if (Array.isArray(item.variations)) {
+                parsedVariations = item.variations;
+            }
+            else if (typeof item.variations === "string") {
+                parsedVariations = JSON.parse(item.variations);
+            }
+            else if (item.variations) {
+                parsedVariations = [item.variations];
+            }
+        }
+        catch {
+            parsedVariations = [];
+        }
         const details = [];
-        for (const v of parsed) {
+        for (const v of parsedVariations) {
             const [variation] = await connection_1.db
                 .select()
                 .from(schema_1.foodVariations)
@@ -138,18 +153,30 @@ const getCart = async (req, res) => {
                 details.push({
                     variationId: variation.id,
                     variationName: variation.name,
+                    variationNameAr: variation.nameAr,
                     optionId: option.id,
                     optionName: option.optionName,
+                    optionNameAr: option.optionNameAr,
                     additionalPrice: option.additionalPrice
                 });
             }
         }
         return {
-            ...item,
+            cartId: item.cartId,
+            foodId: item.foodId,
+            name: item.name,
+            image: item.image,
+            restaurantId: item.restaurantId,
+            restaurantName: item.restaurantName,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            totalPrice: item.totalPrice,
             variations: details
         };
     }));
-    return (0, response_1.SuccessResponse)(res, { data: formatted });
+    return (0, response_1.SuccessResponse)(res, {
+        data: formatted
+    });
 };
 exports.getCart = getCart;
 /* =========================================

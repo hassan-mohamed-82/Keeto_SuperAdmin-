@@ -148,13 +148,27 @@ export const getCart = async (req: Request | any, res: Response) => {
     const formatted = await Promise.all(
         items.map(async (item: any) => {
 
-            const parsed = typeof item.variations === "string"
-                ? JSON.parse(item.variations)
-                : item.variations || [];
+            // ==============================
+            // ✅ FIX SAFE PARSING
+            // ==============================
+            let parsedVariations: any[] = [];
 
-            const details = [];
+            try {
+                if (Array.isArray(item.variations)) {
+                    parsedVariations = item.variations;
+                } else if (typeof item.variations === "string") {
+                    parsedVariations = JSON.parse(item.variations);
+                } else if (item.variations) {
+                    parsedVariations = [item.variations];
+                }
+            } catch {
+                parsedVariations = [];
+            }
 
-            for (const v of parsed) {
+            const details: any[] = [];
+
+            for (const v of parsedVariations) {
+
                 const [variation] = await db
                     .select()
                     .from(foodVariations)
@@ -171,23 +185,34 @@ export const getCart = async (req: Request | any, res: Response) => {
                     details.push({
                         variationId: variation.id,
                         variationName: variation.name,
+                        variationNameAr: variation.nameAr,
                         optionId: option.id,
                         optionName: option.optionName,
+                        optionNameAr: option.optionNameAr,
                         additionalPrice: option.additionalPrice
                     });
                 }
             }
 
             return {
-                ...item,
+                cartId: item.cartId,
+                foodId: item.foodId,
+                name: item.name,
+                image: item.image,
+                restaurantId: item.restaurantId,
+                restaurantName: item.restaurantName,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                totalPrice: item.totalPrice,
                 variations: details
             };
         })
     );
 
-    return SuccessResponse(res, { data: formatted });
+    return SuccessResponse(res, {
+        data: formatted
+    });
 };
-
 /* =========================================
    3. UPDATE CART ITEM
 ========================================= */
