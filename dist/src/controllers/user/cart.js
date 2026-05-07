@@ -96,7 +96,6 @@ const addToCart = async (req, res) => {
 exports.addToCart = addToCart;
 const getCart = async (req, res) => {
     const userId = req.user?.id;
-    // Get cart items
     const items = await connection_1.db
         .select({
         cartId: schema_1.cartItems.id,
@@ -114,21 +113,48 @@ const getCart = async (req, res) => {
         .leftJoin(schema_1.food, (0, drizzle_orm_1.eq)(schema_1.cartItems.foodId, schema_1.food.id))
         .leftJoin(schema_1.restaurants, (0, drizzle_orm_1.eq)(schema_1.cartItems.restaurantId, schema_1.restaurants.id))
         .where((0, drizzle_orm_1.eq)(schema_1.cartItems.userId, userId));
-    // Format response
-    const formattedItems = items.map((item) => ({
-        cartId: item.cartId,
-        foodId: item.foodId,
-        name: item.name,
-        image: item.image,
-        restaurantId: item.restaurantId,
-        restaurantName: item.restaurantName,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        totalPrice: item.totalPrice,
-        // ✅ FIX variations
-        variations: typeof item.variations === "string"
+    const formattedItems = await Promise.all(items.map(async (item) => {
+        const parsedVariations = typeof item.variations === "string"
             ? JSON.parse(item.variations)
-            : item.variations || []
+            : item.variations || [];
+        let detailedVariations = [];
+        for (const v of parsedVariations) {
+            // هات الفارييشن من الداتابيز
+            const [variation] = await connection_1.db
+                .select()
+                .from(schema_1.foodVariations)
+                .where((0, drizzle_orm_1.eq)(schema_1.foodVariations.id, v.variationId))
+                .limit(1);
+            // هات الاوبشن
+            const [option] = await connection_1.db
+                .select()
+                .from(schema_1.variationOptions)
+                .where((0, drizzle_orm_1.eq)(schema_1.variationOptions.id, v.optionId))
+                .limit(1);
+            if (variation && option) {
+                detailedVariations.push({
+                    variationId: variation.id,
+                    variationName: variation.name,
+                    variationNameAr: variation.nameAr,
+                    optionId: option.id,
+                    optionName: option.optionName,
+                    optionNameAr: option.optionNameAr,
+                    additionalPrice: option.additionalPrice
+                });
+            }
+        }
+        return {
+            cartId: item.cartId,
+            foodId: item.foodId,
+            name: item.name,
+            image: item.image,
+            restaurantId: item.restaurantId,
+            restaurantName: item.restaurantName,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            totalPrice: item.totalPrice,
+            variations: detailedVariations
+        };
     }));
     return (0, response_1.SuccessResponse)(res, {
         data: formattedItems
