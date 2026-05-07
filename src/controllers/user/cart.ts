@@ -201,27 +201,83 @@ export const getCart = async (req: Request | any, res: Response) => {
 export const updateCartItem = async (req: Request | any, res: Response) => {
     const userId = req.user?.id;
     const { cartItemId } = req.params;
-    const { quantity } = req.body;
+    const { quantity, variations = [] } = req.body;
 
-    // لو الموبايل بعت الكمية 0 أو أقل، نعتبرها عملية حذف
-    if (quantity <= 0) {
-        await db.delete(cartItems)
-            .where(and(eq(cartItems.id, cartItemId), eq(cartItems.userId, userId)));
-        return SuccessResponse(res, { message: "The item has been removed from the cart" });
+    const [cartItem] = await db
+        .select()
+        .from(cartItems)
+        .where(and(eq(cartItems.id, cartItemId), eq(cartItems.userId, userId)))
+        .limit(1);
+
+    if (!cartItem) {
+        throw new BadRequest("Cart item not found");
     }
 
-    // تحديث الكمية
-    const updated = await db.update(cartItems)
-        .set({ quantity })
+    const [itemFood] = await db
+        .select()
+        .from(food)
+        .where(eq(food.id, cartItem.foodId))
+        .limit(1);
+
+    if (!itemFood) throw new BadRequest("Food not found");
+
+    let totalExtraPrice = 0;
+
+    const dbVariations = await db
+        .select()
+        .from(foodVariations)
+        .where(eq(foodVariations.foodId, itemFood.id));
+
+    for (const v of dbVariations) {
+        const selectedOptions = variations.filter((x: any) => x.variationId === v.id);
+
+        if (v.isRequired && selectedOptions.length === 0) {
+            throw new BadRequest(`${v.name} is required`);
+        }
+
+        if (v.min && selectedOptions.length < v.min) {
+            throw new BadRequest(`Minimum ${v.min} required for ${v.name}`);
+        }
+
+        if (v.max && selectedOptions.length > v.max) {
+            throw new BadRequest(`Maximum ${v.max} allowed for ${v.name}`);
+        }
+
+        const dbOptions = await db
+            .select()
+            .from(variationOptions)
+            .where(eq(variationOptions.variationId, v.id));
+
+        for (const selected of selectedOptions) {
+            const found = dbOptions.find(o => o.id === selected.optionId);
+            if (!found) throw new BadRequest("Invalid option selected");
+
+            totalExtraPrice += Number(found.additionalPrice || 0);
+        }
+    }
+
+    const basePrice = Number(itemFood.price);
+    const unitPrice = basePrice + totalExtraPrice;
+
+    const finalQuantity = quantity || cartItem.quantity;
+
+    await db.update(cartItems)
+        .set({
+            quantity: finalQuantity,
+            variations: JSON.stringify(variations),
+            unitPrice: unitPrice.toString(),
+            totalPrice: (unitPrice * finalQuantity).toString()
+        })
         .where(and(eq(cartItems.id, cartItemId), eq(cartItems.userId, userId)));
 
-    if (updated[0].affectedRows === 0) {
-        throw new BadRequest("The item is not found in your cart");
-    }
-
-    return SuccessResponse(res, { message: "The quantity has been updated successfully" });
+    return SuccessResponse(res, {
+        message: "Cart updated successfully",
+        data: {
+            unitPrice,
+            totalPrice: unitPrice * finalQuantity
+        }
+    });
 };
-
 // ==========================================
 // 4. حذف صنف معين من السلة (Delete Item)
 // ==========================================

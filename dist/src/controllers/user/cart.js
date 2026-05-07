@@ -164,21 +164,67 @@ exports.getCart = getCart;
 const updateCartItem = async (req, res) => {
     const userId = req.user?.id;
     const { cartItemId } = req.params;
-    const { quantity } = req.body;
-    // لو الموبايل بعت الكمية 0 أو أقل، نعتبرها عملية حذف
-    if (quantity <= 0) {
-        await connection_1.db.delete(schema_1.cartItems)
-            .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_1.cartItems.id, cartItemId), (0, drizzle_orm_1.eq)(schema_1.cartItems.userId, userId)));
-        return (0, response_1.SuccessResponse)(res, { message: "The item has been removed from the cart" });
+    const { quantity, variations = [] } = req.body;
+    const [cartItem] = await connection_1.db
+        .select()
+        .from(schema_1.cartItems)
+        .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_1.cartItems.id, cartItemId), (0, drizzle_orm_1.eq)(schema_1.cartItems.userId, userId)))
+        .limit(1);
+    if (!cartItem) {
+        throw new BadRequest_1.BadRequest("Cart item not found");
     }
-    // تحديث الكمية
-    const updated = await connection_1.db.update(schema_1.cartItems)
-        .set({ quantity })
+    const [itemFood] = await connection_1.db
+        .select()
+        .from(schema_1.food)
+        .where((0, drizzle_orm_1.eq)(schema_1.food.id, cartItem.foodId))
+        .limit(1);
+    if (!itemFood)
+        throw new BadRequest_1.BadRequest("Food not found");
+    let totalExtraPrice = 0;
+    const dbVariations = await connection_1.db
+        .select()
+        .from(schema_1.foodVariations)
+        .where((0, drizzle_orm_1.eq)(schema_1.foodVariations.foodId, itemFood.id));
+    for (const v of dbVariations) {
+        const selectedOptions = variations.filter((x) => x.variationId === v.id);
+        if (v.isRequired && selectedOptions.length === 0) {
+            throw new BadRequest_1.BadRequest(`${v.name} is required`);
+        }
+        if (v.min && selectedOptions.length < v.min) {
+            throw new BadRequest_1.BadRequest(`Minimum ${v.min} required for ${v.name}`);
+        }
+        if (v.max && selectedOptions.length > v.max) {
+            throw new BadRequest_1.BadRequest(`Maximum ${v.max} allowed for ${v.name}`);
+        }
+        const dbOptions = await connection_1.db
+            .select()
+            .from(schema_1.variationOptions)
+            .where((0, drizzle_orm_1.eq)(schema_1.variationOptions.variationId, v.id));
+        for (const selected of selectedOptions) {
+            const found = dbOptions.find(o => o.id === selected.optionId);
+            if (!found)
+                throw new BadRequest_1.BadRequest("Invalid option selected");
+            totalExtraPrice += Number(found.additionalPrice || 0);
+        }
+    }
+    const basePrice = Number(itemFood.price);
+    const unitPrice = basePrice + totalExtraPrice;
+    const finalQuantity = quantity || cartItem.quantity;
+    await connection_1.db.update(schema_1.cartItems)
+        .set({
+        quantity: finalQuantity,
+        variations: JSON.stringify(variations),
+        unitPrice: unitPrice.toString(),
+        totalPrice: (unitPrice * finalQuantity).toString()
+    })
         .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_1.cartItems.id, cartItemId), (0, drizzle_orm_1.eq)(schema_1.cartItems.userId, userId)));
-    if (updated[0].affectedRows === 0) {
-        throw new BadRequest_1.BadRequest("The item is not found in your cart");
-    }
-    return (0, response_1.SuccessResponse)(res, { message: "The quantity has been updated successfully" });
+    return (0, response_1.SuccessResponse)(res, {
+        message: "Cart updated successfully",
+        data: {
+            unitPrice,
+            totalPrice: unitPrice * finalQuantity
+        }
+    });
 };
 exports.updateCartItem = updateCartItem;
 // ==========================================
