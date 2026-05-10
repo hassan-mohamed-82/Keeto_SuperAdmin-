@@ -145,8 +145,10 @@ export const getRestaurantDetails = async (req: Request, res: Response) => {
 
     if (!restaurantInfo) throw new Error("Restaurant not found");
 
+    const { password, ...safeRestaurantInfo } = restaurantInfo;
+
     const restaurantWithFav = {
-        ...restaurantInfo,
+        ...safeRestaurantInfo,
         isFavorite: userId ? favoriteRestaurantIds.has(restaurantId) : false
     };
 

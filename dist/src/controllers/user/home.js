@@ -123,8 +123,9 @@ const getRestaurantDetails = async (req, res) => {
         .where((0, drizzle_orm_1.eq)(schema_1.restaurants.id, restaurantId));
     if (!restaurantInfo)
         throw new Error("Restaurant not found");
+    const { password, ...safeRestaurantInfo } = restaurantInfo;
     const restaurantWithFav = {
-        ...restaurantInfo,
+        ...safeRestaurantInfo,
         isFavorite: userId ? favoriteRestaurantIds.has(restaurantId) : false
     };
     const rawMenu = await connection_1.db.select({
