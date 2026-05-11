@@ -222,7 +222,7 @@ export const login = async (req: Request, res: Response) => {
         throw new BadRequest("Please verify your email before logging in");
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.password!);
     if (!isMatch) throw new BadRequest("Invalid credentials");
 
     const token = generateUserToken({ id: user.id, name: user.name });

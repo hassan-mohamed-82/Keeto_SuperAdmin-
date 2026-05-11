@@ -22,6 +22,7 @@ import user_walletsRouter from "./userWallets";
 import SelectReasonsRouter from "./selectReasons";
 import ReportRouter from "./Report"
 import zoneDeliveryFeesRouter from "./zoneDeliveryFees";
+import RatingRouter from "./rating";
 import { authenticated } from "../../middlewares/authenticated";
 import { authorizeRoles } from "../../middlewares/authorized";
 const router = Router();
@@ -50,5 +51,6 @@ router.use("/restaurantsetting", restaurantsettingRouter);
 router.use("/payment-methods", payment_methodsRouter);
 router.use("/user-wallets", user_walletsRouter);
 router.use("/zone-delivery-fees", zoneDeliveryFeesRouter);
+router.use("/ratings", RatingRouter);
 
 export default router;

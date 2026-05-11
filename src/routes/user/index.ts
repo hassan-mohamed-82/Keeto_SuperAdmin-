@@ -11,6 +11,7 @@ import { authorizeRoles } from "../../middlewares/authorized";
 // import walletRouter from "./userWallets";
 import favlistRouter from "./favlist";
 import restaurantFeaturesRouter from "./restaurantFeatures";
+import ratingRouter from "./rating";
 
 const router = Router();
 router.use("/home", homeRouter);
@@ -22,5 +23,6 @@ router.use("/order", orderRouter);
 router.use("/address", addressRouter);
 router.use("/cart", cartRouter);
 router.use("/favlist", favlistRouter);
+router.use("/rating", ratingRouter);
 router.use("/wallet", user_walletsRouter);
 export default router;
