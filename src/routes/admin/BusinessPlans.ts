@@ -5,15 +5,16 @@ import { createBusinessPlan,
        getBusinessPlanById,
        getBusinessPlansByRestaurant
      } from "../../controllers/admin/BusinessPlans";
-    
-
+     import { catchAsync } from "../../utils/catchAsync";
+     import { validate } from "../../middlewares/validation";
+     import { createBusinessPlanSchema, updateBusinessPlanSchema } from "../../validation/admin/BusinessPlans";
 const router = Router();
 
-router.post("/", createBusinessPlan);
-router.get("/restaurant/:restaurantId", getBusinessPlansByRestaurant);
-router.get("/:id", getBusinessPlanById);
-router.put("/:id", updateBusinessPlan);
-router.delete("/:id", deleteBusinessPlan);
+router.post("/", validate(createBusinessPlanSchema), catchAsync(createBusinessPlan));
+router.get("/restaurant/:restaurantId", catchAsync(getBusinessPlansByRestaurant));
+router.get("/:id", catchAsync(getBusinessPlanById));
+router.put("/:id", validate(updateBusinessPlanSchema), catchAsync(updateBusinessPlan));
+router.delete("/:id", catchAsync(deleteBusinessPlan));
 
 
 export default router;

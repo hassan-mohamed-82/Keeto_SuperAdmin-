@@ -8,13 +8,15 @@ import {
     deleteAddon,
     getAllRestaurantsandaddonscategory,
 } from "../../controllers/admin/addon";
+import { validate } from "../../middlewares/validation";
+import { createAddonSchema, updateAddonSchema } from "../../validation/admin/addon";
 
 const router = Router();
 router.get("/select", catchAsync(getAllRestaurantsandaddonscategory));
-router.post("/", catchAsync(createAddon));
+router.post("/", validate(createAddonSchema), catchAsync(createAddon));
 router.get("/", catchAsync(getAllAddons));
 router.get("/:id", catchAsync(getAddonById));
-router.put("/:id", catchAsync(updateAddon));
+router.put("/:id", validate(updateAddonSchema), catchAsync(updateAddon));
 router.delete("/:id", catchAsync(deleteAddon));
 
 export default router;

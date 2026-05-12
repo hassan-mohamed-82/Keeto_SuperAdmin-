@@ -11,15 +11,16 @@ import {
     toggleVariationStatus,
     toggleOptionStatus,
 } from "../../controllers/admin/food";
-
+import { validate } from "../../middlewares/validation";
+import { createFoodSchema, updateFoodSchema } from "../../validation/admin/food";
 const router = Router();
 
 router.get("/select", catchAsync(getFoodSelectData));
 router.get("/restaurant/:id", catchAsync(getFoodsByRestaurantId));
-router.post("/", catchAsync(createFood));
+router.post("/", validate(createFoodSchema), catchAsync(createFood));
 router.get("/", catchAsync(getAllFoods));
 router.get("/:id", catchAsync(getFoodById));
-router.put("/:id", catchAsync(updateFood));
+router.put("/:id", validate(updateFoodSchema), catchAsync(updateFood));
 router.delete("/:id", catchAsync(deleteFood));
 
 // Toggle Endpoints

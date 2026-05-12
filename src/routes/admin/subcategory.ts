@@ -9,13 +9,15 @@ import {
   getallcategory
 } from "../../controllers/admin/subcategory";
 
+import { validate } from "../../middlewares/validation";
+import { createSubcategorySchema, updateSubcategorySchema } from "../../validation/admin/subcategory";
 const router = Router();
 
 router.get("/select", catchAsync(getallcategory));
-router.post("/", catchAsync(createSubcategory));
+router.post("/", validate(createSubcategorySchema), catchAsync(createSubcategory));
 router.get("/", catchAsync(getAllSubcategories));
 router.get("/:id", catchAsync(getSubcategoryById));
-router.put("/:id", catchAsync(updateSubcategory));
+router.put("/:id", validate(updateSubcategorySchema), catchAsync(updateSubcategory));
 router.delete("/:id", catchAsync(deleteSubcategory));
 
 export default router;

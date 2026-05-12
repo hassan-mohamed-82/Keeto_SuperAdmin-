@@ -9,13 +9,15 @@ import {
     getallzone
 } from "../../controllers/admin/zoneDeliveryFees";
 
+import { validate } from "../../middlewares/validation";
+import { createZoneDeliveryFeeSchema, updateZoneDeliveryFeeSchema } from "../../validation/admin/zoneDeliveryFees";
 const router = Router();
 
 router.get("/all", catchAsync(getallzone));
-router.post("/", catchAsync(createZoneDeliveryFee));
+router.post("/", validate(createZoneDeliveryFeeSchema), catchAsync(createZoneDeliveryFee));
 router.get("/", catchAsync(getAllZoneDeliveryFees));
 router.get("/:id", catchAsync(getZoneDeliveryFeeById));
-router.put("/:id", catchAsync(updateZoneDeliveryFee));
+router.put("/:id", validate(updateZoneDeliveryFeeSchema), catchAsync(updateZoneDeliveryFee));
 router.delete("/:id", catchAsync(deleteZoneDeliveryFee));
 
 export default router;

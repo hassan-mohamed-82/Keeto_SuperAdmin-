@@ -2,10 +2,13 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const BusinessPlans_1 = require("../../controllers/admin/BusinessPlans");
+const catchAsync_1 = require("../../utils/catchAsync");
+const validation_1 = require("../../middlewares/validation");
+const BusinessPlans_2 = require("../../validation/admin/BusinessPlans");
 const router = (0, express_1.Router)();
-router.post("/", BusinessPlans_1.createBusinessPlan);
-router.get("/restaurant/:restaurantId", BusinessPlans_1.getBusinessPlansByRestaurant);
-router.get("/:id", BusinessPlans_1.getBusinessPlanById);
-router.put("/:id", BusinessPlans_1.updateBusinessPlan);
-router.delete("/:id", BusinessPlans_1.deleteBusinessPlan);
+router.post("/", (0, validation_1.validate)(BusinessPlans_2.createBusinessPlanSchema), (0, catchAsync_1.catchAsync)(BusinessPlans_1.createBusinessPlan));
+router.get("/restaurant/:restaurantId", (0, catchAsync_1.catchAsync)(BusinessPlans_1.getBusinessPlansByRestaurant));
+router.get("/:id", (0, catchAsync_1.catchAsync)(BusinessPlans_1.getBusinessPlanById));
+router.put("/:id", (0, validation_1.validate)(BusinessPlans_2.updateBusinessPlanSchema), (0, catchAsync_1.catchAsync)(BusinessPlans_1.updateBusinessPlan));
+router.delete("/:id", (0, catchAsync_1.catchAsync)(BusinessPlans_1.deleteBusinessPlan));
 exports.default = router;

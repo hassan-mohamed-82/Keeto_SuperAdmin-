@@ -7,13 +7,14 @@ import {
   updateCategory,
   deleteCategory,
 } from "../../controllers/admin/Category";
-
+import { validate } from "../../middlewares/validation";
+import { createCategorySchema, updateCategorySchema } from "../../validation/admin/Category";
 const router = Router();
 
-router.post("/", catchAsync(createCategory));
+router.post("/", validate(createCategorySchema), catchAsync(createCategory));
 router.get("/", catchAsync(getAllCategories));
 router.get("/:id", catchAsync(getCategoryById));
-router.put("/:id", catchAsync(updateCategory));
+router.put("/:id", validate(updateCategorySchema), catchAsync(updateCategory));
 router.delete("/:id", catchAsync(deleteCategory));
 
 export default router;
