@@ -70,3 +70,23 @@ export const getMyRating = async (req: Request | any, res: Response) => {
         data: myRating || null
     });
 };
+
+
+export const getRestaurantRatings = async (req: Request, res: Response) => {
+    const { restaurantId } = req.params;
+
+    if (!restaurantId) throw new BadRequest("restaurantId is required");
+
+    const result = await db.select({
+        avgRating: avg(restaurantRatings.rating).as("avg_rating"),
+        totalRatings: count(restaurantRatings.id).as("total_ratings"),
+    })
+        .from(restaurantRatings)
+        .where(eq(restaurantRatings.restaurantId, restaurantId))
+        .limit(1);
+
+    return SuccessResponse(res, {
+        data: result[0]
+    });
+};
+

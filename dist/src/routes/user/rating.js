@@ -6,4 +6,5 @@ const catchAsync_1 = require("../../utils/catchAsync");
 const router = (0, express_1.Router)();
 router.post("/", (0, catchAsync_1.catchAsync)(rating_1.rateRestaurant));
 router.get("/:restaurantId", (0, catchAsync_1.catchAsync)(rating_1.getMyRating));
+router.get("/restaurant/:restaurantId", (0, catchAsync_1.catchAsync)(rating_1.getRestaurantRatings));
 exports.default = router;

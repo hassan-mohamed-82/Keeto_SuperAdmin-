@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getRestaurantRatings = exports.getRestaurantRatingStats = void 0;
+exports.deleteRating = exports.getRestaurantRatings = exports.getRestaurantRatingStats = void 0;
 const connection_1 = require("../../models/connection");
 const schema_1 = require("../../models/schema");
 const drizzle_orm_1 = require("drizzle-orm");
@@ -72,3 +72,12 @@ const getRestaurantRatings = async (req, res) => {
     return (0, response_1.SuccessResponse)(res, { data: ratings });
 };
 exports.getRestaurantRatings = getRestaurantRatings;
+const deleteRating = async (req, res) => {
+    const { id } = req.params;
+    const [rating] = await connection_1.db.select().from(schema_1.restaurantRatings).where((0, drizzle_orm_1.eq)(schema_1.restaurantRatings.id, id)).limit(1);
+    if (!rating)
+        throw new NotFound_1.NotFound("Rating not found");
+    await connection_1.db.delete(schema_1.restaurantRatings).where((0, drizzle_orm_1.eq)(schema_1.restaurantRatings.id, id));
+    return (0, response_1.SuccessResponse)(res, { data: null });
+};
+exports.deleteRating = deleteRating;

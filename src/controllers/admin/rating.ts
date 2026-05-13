@@ -77,3 +77,12 @@ export const getRestaurantRatings = async (req: Request, res: Response) => {
 
     return SuccessResponse(res, { data: ratings });
 };
+
+
+export const deleteRating = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const [rating] = await db.select().from(restaurantRatings).where(eq(restaurantRatings.id, id)).limit(1);
+    if (!rating) throw new NotFound("Rating not found");
+    await db.delete(restaurantRatings).where(eq(restaurantRatings.id, id));
+    return SuccessResponse(res, { data: null });
+}

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getMyRating = exports.rateRestaurant = void 0;
+exports.getRestaurantRatings = exports.getMyRating = exports.rateRestaurant = void 0;
 const connection_1 = require("../../models/connection");
 const schema_1 = require("../../models/schema");
 const drizzle_orm_1 = require("drizzle-orm");
@@ -59,3 +59,19 @@ const getMyRating = async (req, res) => {
     });
 };
 exports.getMyRating = getMyRating;
+const getRestaurantRatings = async (req, res) => {
+    const { restaurantId } = req.params;
+    if (!restaurantId)
+        throw new BadRequest_1.BadRequest("restaurantId is required");
+    const result = await connection_1.db.select({
+        avgRating: (0, drizzle_orm_1.avg)(schema_1.restaurantRatings.rating).as("avg_rating"),
+        totalRatings: (0, drizzle_orm_1.count)(schema_1.restaurantRatings.id).as("total_ratings"),
+    })
+        .from(schema_1.restaurantRatings)
+        .where((0, drizzle_orm_1.eq)(schema_1.restaurantRatings.restaurantId, restaurantId))
+        .limit(1);
+    return (0, response_1.SuccessResponse)(res, {
+        data: result[0]
+    });
+};
+exports.getRestaurantRatings = getRestaurantRatings;
