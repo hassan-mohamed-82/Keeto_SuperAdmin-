@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const policy_1 = require("../../controllers/admin/policy");
+const catchAsync_1 = require("../../utils/catchAsync");
+const middlewares_1 = require("../../middlewares");
+const router = (0, express_1.Router)();
+router.post("/", (0, middlewares_1.hasPermission)("policy", "Add"), (0, catchAsync_1.catchAsync)(policy_1.createPolicy));
+router.put("/", (0, middlewares_1.hasPermission)("policy", "Edit"), (0, catchAsync_1.catchAsync)(policy_1.updatePolicy));
+router.delete("/", (0, middlewares_1.hasPermission)("policy", "Delete"), (0, catchAsync_1.catchAsync)(policy_1.deletePolicy));
+router.get("/:id", (0, middlewares_1.hasPermission)("policy", "View"), (0, catchAsync_1.catchAsync)(policy_1.getPolicy));
+router.get("/", (0, middlewares_1.hasPermission)("policy", "View"), (0, catchAsync_1.catchAsync)(policy_1.getPolicies));
+exports.default = router;

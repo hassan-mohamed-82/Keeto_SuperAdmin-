@@ -26,6 +26,7 @@ export * from "./schema/admin/popup";
 
 export * from "./schema/admin/restaurantZoneDeliveryFees";
 export * from "./schema/admin/order";
+export * from "./schema/admin/policy";
 export * from "./schema/user/Users";
 export * from "./schema/user/address";
 export * from "./schema/user/userWallets";

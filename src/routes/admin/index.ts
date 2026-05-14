@@ -12,6 +12,7 @@ import AdonecategoryRouter from "./adonescategory";
 import AddonRouter from "./addon";
 import RestaurantRouter from "./restaurants";
 import FoodRouter from "./food";
+import policyRouter from "./policy";
 import BasiccampaignRouter from "./Basiccampaign";
 import walletsRouter from "./restaurant_wallets"
 import BussinessplanRouter from "./BusinessPlans";
@@ -40,6 +41,7 @@ router.use("/cuisines", CuisineRouter);
 router.use("/categories", CategoryRouter);
 router.use("/subcategories", SubcategoryRouter);
 router.use("/order", OrderRouter);
+router.use("/policy", policyRouter);
 router.use("/adonescategory", AdonecategoryRouter);
 router.use("/restaurants", RestaurantRouter);
 router.use("/addons", AddonRouter);

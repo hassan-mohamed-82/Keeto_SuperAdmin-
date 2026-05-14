@@ -1,3 +1,4 @@
+
 export const MODULES = [
     "Admins",
     "Roles",
@@ -12,6 +13,7 @@ export const MODULES = [
     "Categories",
     "Subcategories",
     "AdonesCategories",
+    "policy",
     "Adones",
     "RestaurantSettings",
     "Users",

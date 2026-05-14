@@ -15,6 +15,7 @@ exports.MODULES = [
     "Categories",
     "Subcategories",
     "AdonesCategories",
+    "policy",
     "Adones",
     "RestaurantSettings",
     "Users",

@@ -41,6 +41,7 @@ __exportStar(require("./schema/admin/zoneDeliveryFees"), exports);
 __exportStar(require("./schema/admin/popup"), exports);
 __exportStar(require("./schema/admin/restaurantZoneDeliveryFees"), exports);
 __exportStar(require("./schema/admin/order"), exports);
+__exportStar(require("./schema/admin/policy"), exports);
 __exportStar(require("./schema/user/Users"), exports);
 __exportStar(require("./schema/user/address"), exports);
 __exportStar(require("./schema/user/userWallets"), exports);
