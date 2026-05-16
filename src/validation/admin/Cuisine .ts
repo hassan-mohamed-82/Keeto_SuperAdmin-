@@ -3,13 +3,16 @@ import { z } from "zod";
 export const createCuisineSchema = z.object({
     // الحقول الأساسية (Required)
     name: z.string().min(1, "Name is required").max(255, "Name cannot exceed 255 characters"),
-    Image: z.string().min(1, "Image is required").max(500, "Image URL/Path cannot exceed 500 characters"),
+    
+    // Updated: Removed .max(500)
+    Image: z.string().min(1, "Image is required"),
 
     // الحقول الاختيارية (Nullable أو ليها Default)
     nameAr: z.string().max(255).optional(),
     nameFr: z.string().max(255).optional(),
     
-    meta_image: z.string().max(500).optional(),
+    // Updated: Removed .max(500)
+    meta_image: z.string().optional(),
     
     description: z.string().optional(),
     descriptionAr: z.string().optional(),

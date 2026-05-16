@@ -8,8 +8,9 @@ exports.cuisines = (0, mysql_core_1.mysqlTable)("cuisines", {
     name: (0, mysql_core_1.varchar)("name", { length: 255 }).notNull(),
     nameAr: (0, mysql_core_1.varchar)("name_ar", { length: 255 }).notNull().default(''),
     nameFr: (0, mysql_core_1.varchar)("name_fr", { length: 255 }).notNull().default(''),
-    Image: (0, mysql_core_1.varchar)("image", { length: 500 }).notNull(),
-    meta_image: (0, mysql_core_1.varchar)("meta_image", { length: 500 }),
+    // Updated: Changed from varchar(500) to text
+    Image: (0, mysql_core_1.text)("image").notNull(),
+    meta_image: (0, mysql_core_1.text)("meta_image"),
     description: (0, mysql_core_1.text)("description"),
     descriptionAr: (0, mysql_core_1.text)("description_ar").notNull().default(''),
     descriptionFr: (0, mysql_core_1.text)("description_fr").notNull().default(''),

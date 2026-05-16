@@ -3,18 +3,22 @@ import {
     varchar,
     timestamp,
     mysqlEnum,
-    json,
     char,
-    text
-, longtext } from "drizzle-orm/mysql-core";
+    text,
+    longtext // you can use longtext if you are saving base64 images
+} from "drizzle-orm/mysql-core";
 import { sql } from "drizzle-orm";
+
 export const cuisines = mysqlTable("cuisines", {
     id: char("id", { length: 36 }).primaryKey().default(sql`(UUID())`),
     name: varchar("name", { length: 255 }).notNull(),
     nameAr: varchar("name_ar", { length: 255 }).notNull().default(''),
     nameFr: varchar("name_fr", { length: 255 }).notNull().default(''),
-    Image: varchar("image", { length: 500 }).notNull(),
-    meta_image: varchar("meta_image", { length: 500 }),
+    
+    // Updated: Changed from varchar(500) to text
+    Image: text("image").notNull(), 
+    meta_image: text("meta_image"), 
+    
     description: text("description"),
     descriptionAr: text("description_ar").notNull().default(''),
     descriptionFr: text("description_fr").notNull().default(''),
