@@ -7,32 +7,57 @@ exports.handleImageUpdate = exports.deleteImage = exports.validateAndSaveLogo = 
 exports.saveBase64Image = saveBase64Image;
 const path_1 = __importDefault(require("path"));
 const promises_1 = __importDefault(require("fs/promises"));
-const uuid_1 = require("uuid"); // لتوليد أسماء فريدة
+const uuid_1 = require("uuid");
 const Errors_1 = require("../Errors");
-const constant_1 = require("../types/constant");
 async function saveBase64Image(req, base64, folder) {
-    const matches = base64.match(/^data:(.+);base64,(.+)$/);
-    if (!matches || matches.length !== 3) {
-        throw new Error("Invalid base64 format");
+    if (typeof base64 !== "string") {
+        throw new Errors_1.BadRequest("Invalid image data. Expected a base64 string, received an object.");
     }
-    const mimeType = matches[1];
-    const ext = mimeType.split("/")[1] || "png";
-    const buffer = Buffer.from(matches[2], "base64");
-    // استخدام UUID لتجنب تكرار الأسماء
-    const fileName = `${(0, uuid_1.v4)()}.${ext}`;
-    const uploadsDir = path_1.default.join(__dirname, "../..", "uploads", folder);
-    await promises_1.default.mkdir(uploadsDir, { recursive: true });
-    const filePath = path_1.default.join(uploadsDir, fileName);
-    await promises_1.default.writeFile(filePath, buffer);
-    // إرجاع المسار النسبي والـ URL
-    const relativePath = `uploads/${folder}/${fileName}`;
-    const imageUrl = `${req.protocol}://${req.get("host")}/${relativePath}`;
-    return { url: imageUrl, relativePath };
+    let ext = "png"; // الصيغة الافتراضية
+    let base64Data = base64;
+    // 1. فحص هل النص بيحتوي على المقدمة (data:image...)؟
+    const matches = base64.match(/^data:(.+);base64,(.+)$/);
+    if (matches && matches.length === 3) {
+        // لو مبعوتة بالمقدمة، نفصلها وناخد الكود الصافي
+        const mimeType = matches[1];
+        ext = mimeType.split("/")[1] || "png";
+        base64Data = matches[2];
+    }
+    else {
+        // 2. لو مبعوتة كود صافي (زي الداتا بتاعتك دلوقتي)
+        // هنستنتج نوع الصورة من أول حروف الكود
+        if (base64.startsWith("/9j/"))
+            ext = "jpeg";
+        else if (base64.startsWith("iVBORw0K"))
+            ext = "png";
+        else if (base64.startsWith("R0lGOD"))
+            ext = "gif";
+        else if (base64.startsWith("UklGR"))
+            ext = "webp";
+    }
+    try {
+        // تحويل الكود لملف فعلي
+        const buffer = Buffer.from(base64Data, "base64");
+        // استخدام UUID لتجنب تكرار الأسماء
+        const fileName = `${(0, uuid_1.v4)()}.${ext}`;
+        const uploadsDir = path_1.default.join(__dirname, "../..", "uploads", folder);
+        await promises_1.default.mkdir(uploadsDir, { recursive: true });
+        const filePath = path_1.default.join(uploadsDir, fileName);
+        await promises_1.default.writeFile(filePath, buffer);
+        // إرجاع المسار النسبي والـ URL
+        const relativePath = `uploads/${folder}/${fileName}`;
+        const imageUrl = `${req.protocol}://${req.get("host")}/${relativePath}`;
+        return { url: imageUrl, relativePath };
+    }
+    catch (error) {
+        throw new Errors_1.BadRequest("Failed to process base64 image data.");
+    }
 }
 const validateAndSaveLogo = async (req, logo, folder) => {
-    if (!logo.match(constant_1.BASE64_IMAGE_REGEX)) {
-        throw new Errors_1.BadRequest("Invalid logo format. Must be a base64 encoded image (JPEG, PNG, GIF, or WebP)");
+    if (typeof logo !== "string") {
+        throw new Errors_1.BadRequest("Invalid logo data. Expected a base64 string.");
     }
+    // شلنا فحص الـ Regex المعقد من هنا عشان دالة saveBase64Image بقت بتعالج كل الحالات
     try {
         const savedUrl = await saveBase64Image(req, logo, folder);
         return savedUrl.url;
@@ -66,7 +91,7 @@ const deleteImage = async (image) => {
 };
 exports.deleteImage = deleteImage;
 const handleImageUpdate = async (req, oldImage, newImage, folder) => {
-    if (!newImage || newImage.startsWith("http")) {
+    if (!newImage || (typeof newImage === 'string' && newImage.startsWith("http"))) {
         return newImage || oldImage;
     }
     const savedUrl = await (0, exports.validateAndSaveLogo)(req, newImage, folder);

@@ -28,7 +28,7 @@ export const createRestaurantSchema = z.object({
     tags: z.array(z.string()).optional(),
 
     taxNumber: z.string().max(255).optional(),
-    taxExpireDate: z.coerce.date().optional(),
+    taxExpireDate: z.coerce.date().optional(),  
     taxCertificate: fileOrString.optional(),
     
     email: z.string().email("Invalid email address").max(255),

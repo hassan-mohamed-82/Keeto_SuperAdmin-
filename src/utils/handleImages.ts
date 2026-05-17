@@ -1,45 +1,68 @@
 import path from "path";
 import fs from "fs/promises";
 import { Request } from "express";
-import { v4 as uuidv4 } from "uuid"; // لتوليد أسماء فريدة
+import { v4 as uuidv4 } from "uuid";
 import { BadRequest } from "../Errors";
-import { BASE64_IMAGE_REGEX } from "../types/constant";
 
 export async function saveBase64Image(
   req: Request,
-  base64: string,
+  base64: any,
   folder: string
 ): Promise<{ url: string; relativePath: string }> {
-  const matches = base64.match(/^data:(.+);base64,(.+)$/);
-  if (!matches || matches.length !== 3) {
-    throw new Error("Invalid base64 format");
+  
+  if (typeof base64 !== "string") {
+    throw new BadRequest("Invalid image data. Expected a base64 string, received an object.");
   }
 
-  const mimeType = matches[1];
-  const ext = mimeType.split("/")[1] || "png";
-  const buffer = Buffer.from(matches[2], "base64");
+  let ext = "png"; // الصيغة الافتراضية
+  let base64Data = base64;
 
-  // استخدام UUID لتجنب تكرار الأسماء
-  const fileName = `${uuidv4()}.${ext}`;
-  const uploadsDir = path.join(__dirname, "../..", "uploads", folder);
+  // 1. فحص هل النص بيحتوي على المقدمة (data:image...)؟
+  const matches = base64.match(/^data:(.+);base64,(.+)$/);
 
-  await fs.mkdir(uploadsDir, { recursive: true });
+  if (matches && matches.length === 3) {
+    // لو مبعوتة بالمقدمة، نفصلها وناخد الكود الصافي
+    const mimeType = matches[1];
+    ext = mimeType.split("/")[1] || "png";
+    base64Data = matches[2];
+  } else {
+    // 2. لو مبعوتة كود صافي (زي الداتا بتاعتك دلوقتي)
+    // هنستنتج نوع الصورة من أول حروف الكود
+    if (base64.startsWith("/9j/")) ext = "jpeg";
+    else if (base64.startsWith("iVBORw0K")) ext = "png";
+    else if (base64.startsWith("R0lGOD")) ext = "gif";
+    else if (base64.startsWith("UklGR")) ext = "webp";
+  }
 
-  const filePath = path.join(uploadsDir, fileName);
-  await fs.writeFile(filePath, buffer);
+  try {
+    // تحويل الكود لملف فعلي
+    const buffer = Buffer.from(base64Data, "base64");
 
-  // إرجاع المسار النسبي والـ URL
-  const relativePath = `uploads/${folder}/${fileName}`;
-  const imageUrl = `${req.protocol}://${req.get("host")}/${relativePath}`;
+    // استخدام UUID لتجنب تكرار الأسماء
+    const fileName = `${uuidv4()}.${ext}`;
+    const uploadsDir = path.join(__dirname, "../..", "uploads", folder);
 
-  return { url: imageUrl, relativePath };
+    await fs.mkdir(uploadsDir, { recursive: true });
+
+    const filePath = path.join(uploadsDir, fileName);
+    await fs.writeFile(filePath, buffer);
+
+    // إرجاع المسار النسبي والـ URL
+    const relativePath = `uploads/${folder}/${fileName}`;
+    const imageUrl = `${req.protocol}://${req.get("host")}/${relativePath}`;
+
+    return { url: imageUrl, relativePath };
+  } catch (error) {
+    throw new BadRequest("Failed to process base64 image data.");
+  }
 }
 
-
-export const validateAndSaveLogo = async (req: Request, logo: string, folder: string): Promise<string> => {
-  if (!logo.match(BASE64_IMAGE_REGEX)) {
-    throw new BadRequest("Invalid logo format. Must be a base64 encoded image (JPEG, PNG, GIF, or WebP)");
+export const validateAndSaveLogo = async (req: Request, logo: any, folder: string): Promise<string> => {
+  if (typeof logo !== "string") {
+    throw new BadRequest("Invalid logo data. Expected a base64 string.");
   }
+
+  // شلنا فحص الـ Regex المعقد من هنا عشان دالة saveBase64Image بقت بتعالج كل الحالات
   try {
     const savedUrl = await saveBase64Image(req, logo, folder);
     return savedUrl.url;
@@ -72,10 +95,8 @@ export const deleteImage = async (image: string) => {
   }
 };
 
-
-
-export const handleImageUpdate = async (req: Request, oldImage: string | null | undefined, newImage: string | undefined, folder: string) => {
-  if (!newImage || newImage.startsWith("http")) {
+export const handleImageUpdate = async (req: Request, oldImage: string | null | undefined, newImage: any, folder: string) => {
+  if (!newImage || (typeof newImage === 'string' && newImage.startsWith("http"))) {
     return newImage || oldImage;
   }
 
