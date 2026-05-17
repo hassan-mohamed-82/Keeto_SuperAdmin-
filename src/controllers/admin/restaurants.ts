@@ -43,52 +43,39 @@ const decrementCuisineCount = async (cuisineId: string) => {
     }
 };
 export const createRestaurant = async (req: Request, res: Response) => {
-    const clean = (v: any) =>
-        typeof v === "string" ? v.trim() : v;
+    const clean = (v: any) => (typeof v === "string" ? v.trim() : v);
 
     const {
-        name,
-        nameAr,
-        nameFr,
-        address,
-        addressAr,
-        addressFr,
-        cuisineId,
-        zoneId,
-        logo,
-        cover,
-        minDeliveryTime,
-        maxDeliveryTime,
-        deliveryTimeUnit,
-        ownerFirstName,
-        ownerLastName,
-        ownerPhone,
-        tags,
-        taxNumber,
-        taxExpireDate,
-        taxCertificate,
-        email,
-        password,
-        status
+        name, nameAr, nameFr, address, addressAr, addressFr,
+        cuisineId, zoneId, logo, cover, minDeliveryTime, maxDeliveryTime,
+        deliveryTimeUnit, ownerFirstName, ownerLastName, ownerPhone,
+        tags, taxNumber, taxExpireDate, taxCertificate, email, password, status
     } = req.body;
 
     if (!name || !nameAr || !nameFr || !address || !addressAr || !zoneId || !logo || !ownerFirstName || !ownerLastName || !ownerPhone || !email || !password) {
         throw new BadRequest("Missing required fields");
     }
-    let logoUrl: string | undefined = undefined;
 
+    // 🚀 حماية الـ Logo من الـ Objects الفارغة
+    let logoUrl: string | undefined = undefined;
     if (logo) {
+        if (typeof logo !== 'string') {
+            throw new BadRequest("Invalid logo format. Expected a base64 string, received an object.");
+        }
         const result = await saveBase64Image(req, logo, "restaurants");
         logoUrl = result.url;
     }
 
-    // handle cover image
+    // 🚀 حماية الـ Cover من الـ Objects الفارغة
     let coverUrl: string | undefined = undefined;
-
-    if (cover) {
+    if (cover && Object.keys(cover).length > 0) { // لو مبعوت أوبجكت فاضي هنتجاهله
+        if (typeof cover !== 'string') {
+            throw new BadRequest("Invalid cover format. Expected a base64 string, received an object.");
+        }
         const result = await saveBase64Image(req, cover, "restaurants_cover");
         coverUrl = result.url;
     }
+
     const existing = await db
         .select()
         .from(restaurants)
@@ -110,19 +97,17 @@ export const createRestaurant = async (req: Request, res: Response) => {
     await db.transaction(async (tx) => {
         await tx.insert(restaurants).values({
             id,
-
             name: clean(name),
             nameAr: clean(nameAr),
             nameFr: clean(nameFr),
             address: clean(address),
             addressAr: clean(addressAr),
             addressFr: clean(addressFr),
-
             cuisineId: cuisineId || null,
             zoneId: clean(zoneId),
 
-            logo: logoUrl|| '',
-            cover: coverUrl|| '',
+            logo: logoUrl || '',
+            cover: coverUrl || '',
 
             minDeliveryTime: minDeliveryTime ? clean(minDeliveryTime) : null,
             maxDeliveryTime: maxDeliveryTime ? clean(maxDeliveryTime) : null,
@@ -136,12 +121,11 @@ export const createRestaurant = async (req: Request, res: Response) => {
 
             taxNumber: taxNumber ? clean(taxNumber) : null,
             taxExpireDate: taxExpireDate || null,
-            taxCertificate: taxCertificate ? clean(taxCertificate) : null,
+            taxCertificate: typeof taxCertificate === 'string' ? clean(taxCertificate) : null,
 
             email: clean(email),
             password: hashedPassword,
-
-            status: "active",
+            status: status || "active",
         });
 
         await tx.insert(restaurantWallets).values({

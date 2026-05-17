@@ -1,7 +1,8 @@
 import { z } from "zod";
 
+const fileOrString = z.any();
+
 export const createRestaurantSchema = z.object({
-    // 1. Restaurant Info & Location
     name: z.string().min(1, "Name is required").max(255),
     nameAr: z.string().max(255).optional(),
     nameFr: z.string().max(255).optional(),
@@ -9,13 +10,13 @@ export const createRestaurantSchema = z.object({
     addressAr: z.string().optional(),
     addressFr: z.string().optional(),
     
-    cuisineId: z.string().uuid("Invalid Cuisine ID").optional(), // Optional حسب الـ Schema
+    cuisineId: z.string().uuid("Invalid Cuisine ID").optional(), 
     zoneId: z.string().uuid("Invalid Zone ID"),
     
-    logo: z.string().min(1, "Logo is required").max(500),
-    cover: z.string().max(500).optional(),
+    // 🚀 التعديل هنا لضمان عدم ضرب إيرور Validation بسبب الـ Base64
+    logo: fileOrString,
+    cover: fileOrString.optional(),
 
-    // 2. Delivery & Owner Info
     minDeliveryTime: z.string().max(50).optional(),
     maxDeliveryTime: z.string().max(50).optional(),
     deliveryTimeUnit: z.string().max(50).optional(),
@@ -24,19 +25,14 @@ export const createRestaurantSchema = z.object({
     ownerLastName: z.string().min(1, "Owner last name is required").max(255),
     ownerPhone: z.string().min(1, "Owner phone is required").max(50),
     
-    // التاجز (مصفوفة من النصوص)
     tags: z.array(z.string()).optional(),
 
-    // 3. Business TIN & Account Info
     taxNumber: z.string().max(255).optional(),
-    taxExpireDate: z.coerce.date().optional(), // بيحول النص لتاريخ
-    taxCertificate: z.string().max(255).optional(),
+    taxExpireDate: z.coerce.date().optional(),
+    taxCertificate: fileOrString.optional(),
     
     email: z.string().email("Invalid email address").max(255),
     password: z.string().min(6, "Password must be at least 6 characters").max(255),
-    
-    // 💡 ممكن تزود تأكيد الباسورد كده وتعمل Refine لو هتستخدمها في الـ Controller مباشرة
-    // confirmPassword: z.string().optional(),
     
     type: z.enum(["restaurantadmin", "superadmin"]).optional(),
     addhome: z.boolean().optional(),

@@ -44,19 +44,26 @@ const decrementCuisineCount = async (cuisineId) => {
     }
 };
 const createRestaurant = async (req, res) => {
-    const clean = (v) => typeof v === "string" ? v.trim() : v;
+    const clean = (v) => (typeof v === "string" ? v.trim() : v);
     const { name, nameAr, nameFr, address, addressAr, addressFr, cuisineId, zoneId, logo, cover, minDeliveryTime, maxDeliveryTime, deliveryTimeUnit, ownerFirstName, ownerLastName, ownerPhone, tags, taxNumber, taxExpireDate, taxCertificate, email, password, status } = req.body;
     if (!name || !nameAr || !nameFr || !address || !addressAr || !zoneId || !logo || !ownerFirstName || !ownerLastName || !ownerPhone || !email || !password) {
         throw new BadRequest_1.BadRequest("Missing required fields");
     }
+    // 🚀 حماية الـ Logo من الـ Objects الفارغة
     let logoUrl = undefined;
     if (logo) {
+        if (typeof logo !== 'string') {
+            throw new BadRequest_1.BadRequest("Invalid logo format. Expected a base64 string, received an object.");
+        }
         const result = await (0, handleImages_1.saveBase64Image)(req, logo, "restaurants");
         logoUrl = result.url;
     }
-    // handle cover image
+    // 🚀 حماية الـ Cover من الـ Objects الفارغة
     let coverUrl = undefined;
-    if (cover) {
+    if (cover && Object.keys(cover).length > 0) { // لو مبعوت أوبجكت فاضي هنتجاهله
+        if (typeof cover !== 'string') {
+            throw new BadRequest_1.BadRequest("Invalid cover format. Expected a base64 string, received an object.");
+        }
         const result = await (0, handleImages_1.saveBase64Image)(req, cover, "restaurants_cover");
         coverUrl = result.url;
     }
@@ -96,10 +103,10 @@ const createRestaurant = async (req, res) => {
             tags: parsedTags,
             taxNumber: taxNumber ? clean(taxNumber) : null,
             taxExpireDate: taxExpireDate || null,
-            taxCertificate: taxCertificate ? clean(taxCertificate) : null,
+            taxCertificate: typeof taxCertificate === 'string' ? clean(taxCertificate) : null,
             email: clean(email),
             password: hashedPassword,
-            status: "active",
+            status: status || "active",
         });
         await tx.insert(schema_1.restaurantWallets).values({
             id: (0, uuid_1.v4)(),
