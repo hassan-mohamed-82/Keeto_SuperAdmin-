@@ -151,22 +151,33 @@ const getAllRestaurants = async (req, res) => {
         .leftJoin(schema_1.zones, (0, drizzle_orm_1.eq)(schema_1.restaurants.zoneId, schema_1.zones.id));
     const allCuisinesList = await connection_1.db.select({ id: schema_1.cuisines.id, name: schema_1.cuisines.name }).from(schema_1.cuisines);
     const cuisineMap = new Map(allCuisinesList.map(c => [c.id, c]));
-    const formatted = raw.map(r => ({
-        id: r.id,
-        name: r.name,
-        nameAr: r.nameAr,
-        nameFr: r.nameFr,
-        address: r.address,
-        addressAr: r.addressAr,
-        addressFr: r.addressFr,
-        logo: r.logo,
-        cover: r.cover,
-        status: r.status,
-        cuisines: (r.cuisineIds || []).map((id) => cuisineMap.get(id)).filter(Boolean),
-        zone: r.zone_id
-            ? { id: r.zone_id, name: r.zone_name }
-            : null,
-    }));
+    const formatted = raw.map(r => {
+        let parsedCuisines = [];
+        if (r.cuisineIds) {
+            try {
+                parsedCuisines = typeof r.cuisineIds === "string" ? JSON.parse(r.cuisineIds) : r.cuisineIds;
+            }
+            catch (e) {
+                parsedCuisines = [];
+            }
+        }
+        return {
+            id: r.id,
+            name: r.name,
+            nameAr: r.nameAr,
+            nameFr: r.nameFr,
+            address: r.address,
+            addressAr: r.addressAr,
+            addressFr: r.addressFr,
+            logo: r.logo,
+            cover: r.cover,
+            status: r.status,
+            cuisines: parsedCuisines.map((id) => cuisineMap.get(id)).filter(Boolean),
+            zone: r.zone_id
+                ? { id: r.zone_id, name: r.zone_name }
+                : null,
+        };
+    });
     return (0, response_1.SuccessResponse)(res, {
         message: "Get all restaurants success",
         data: formatted

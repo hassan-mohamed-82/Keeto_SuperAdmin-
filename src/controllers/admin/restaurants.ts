@@ -176,24 +176,35 @@ export const getAllRestaurants = async (req: Request, res: Response) => {
     const allCuisinesList = await db.select({ id: cuisines.id, name: cuisines.name }).from(cuisines);
     const cuisineMap = new Map(allCuisinesList.map(c => [c.id, c]));
 
-    const formatted = raw.map(r => ({
-        id: r.id,
-        name: r.name,
-        nameAr: r.nameAr,
-        nameFr: r.nameFr,
-        address: r.address,
-        addressAr: r.addressAr,
-        addressFr: r.addressFr,
-        logo: r.logo,
-        cover: r.cover,
-        status: r.status,
+    const formatted = raw.map(r => {
+        let parsedCuisines: string[] = [];
+        if (r.cuisineIds) {
+            try {
+                parsedCuisines = typeof r.cuisineIds === "string" ? JSON.parse(r.cuisineIds) : r.cuisineIds;
+            } catch (e) {
+                parsedCuisines = [];
+            }
+        }
 
-        cuisines: (r.cuisineIds || []).map((id: string) => cuisineMap.get(id)).filter(Boolean),
+        return {
+            id: r.id,
+            name: r.name,
+            nameAr: r.nameAr,
+            nameFr: r.nameFr,
+            address: r.address,
+            addressAr: r.addressAr,
+            addressFr: r.addressFr,
+            logo: r.logo,
+            cover: r.cover,
+            status: r.status,
 
-        zone: r.zone_id
-            ? { id: r.zone_id, name: r.zone_name }
-            : null,
-    }));
+            cuisines: parsedCuisines.map((id: string) => cuisineMap.get(id)).filter(Boolean),
+
+            zone: r.zone_id
+                ? { id: r.zone_id, name: r.zone_name }
+                : null,
+        };
+    });
 
     return SuccessResponse(res, {
         message: "Get all restaurants success",
