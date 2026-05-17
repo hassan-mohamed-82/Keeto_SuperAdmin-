@@ -8,7 +8,8 @@ import {
     text,
     date,
     boolean
-, longtext } from "drizzle-orm/mysql-core";
+    , longtext
+} from "drizzle-orm/mysql-core";
 import { sql } from "drizzle-orm";
 
 // ⚠️ تأكد من استيراد الجداول دي من مساراتها الصحيحة عندك
@@ -27,11 +28,11 @@ export const restaurants = mysqlTable("restaurants", {
     address: text("address").notNull(),
     addressAr: text("address_ar").notNull().default(''),
     addressFr: text("address_fr").notNull().default(''),
-    
+
     // العلاقات (Relations)
-    cuisineId: char("cuisine_id", { length: 36 }).references(() => cuisines.id),
+    cuisineId: json("cuisine_id").$type<string[]>().default([]),
     zoneId: char("zone_id", { length: 36 }).references(() => zones.id).notNull(),
- 
+
     // الصور (Files/Images)
     logo: varchar("logo", { length: 500 }).notNull(),
     cover: varchar("cover", { length: 500 }),
@@ -62,7 +63,7 @@ export const restaurants = mysqlTable("restaurants", {
     email: varchar("email", { length: 255 }).notNull().unique(),
     password: varchar("password", { length: 255 }).notNull(),
     // 💡 ملاحظة: حقل Confirm Password مش بيتسجل في الداتابيز، ده بيكون Validation في الـ Controller بس
-     
+
     type: mysqlEnum("type", ["restaurantadmin", "superadmin"]).default("restaurantadmin"),
     // Status & Timestamps
     // ==========================================
@@ -79,4 +80,4 @@ import { food, foodVariations, variationOptions } from "../../schema";
 
 export const restaurantRelations = relations(restaurants, ({ many }) => ({
     food: many(food),
-}));
+}));

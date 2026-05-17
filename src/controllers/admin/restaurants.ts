@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { db } from "../../models/connection";
 import { restaurants, cuisines, zones, restaurantWallets } from "../../models/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, inArray } from "drizzle-orm";
 import { SuccessResponse } from "../../utils/response";
 import { NotFound } from "../../Errors/NotFound";
 import { BadRequest } from "../../Errors/BadRequest";
@@ -94,6 +94,11 @@ export const createRestaurant = async (req: Request, res: Response) => {
         parsedTags = typeof tags === "string" ? JSON.parse(tags) : tags;
     }
 
+    let parsedCuisines: string[] = [];
+    if (cuisineId) {
+        parsedCuisines = typeof cuisineId === "string" ? JSON.parse(cuisineId) : cuisineId;
+    }
+
     await db.transaction(async (tx) => {
         await tx.insert(restaurants).values({
             id,
@@ -103,7 +108,7 @@ export const createRestaurant = async (req: Request, res: Response) => {
             address: clean(address),
             addressAr: clean(addressAr),
             addressFr: clean(addressFr),
-            cuisineId: cuisineId || null,
+            cuisineId: parsedCuisines,
             zoneId: clean(zoneId),
 
             logo: logoUrl || '',
@@ -139,6 +144,10 @@ export const createRestaurant = async (req: Request, res: Response) => {
         });
     });
 
+    for (const cid of parsedCuisines) {
+        await incrementCuisineCount(cid);
+    }
+
     return SuccessResponse(res, {
         message: "Restaurant created successfully",
         data: { id }
@@ -156,15 +165,16 @@ export const getAllRestaurants = async (req: Request, res: Response) => {
         logo: restaurants.logo,
         cover: restaurants.cover,
         status: restaurants.status,
-        cuisine_id: cuisines.id,
-        cuisine_name: cuisines.name,
+        cuisineIds: restaurants.cuisineId,
 
         zone_id: zones.id,
         zone_name: zones.name,
     })
     .from(restaurants)
-    .leftJoin(cuisines, eq(restaurants.cuisineId, cuisines.id))
     .leftJoin(zones, eq(restaurants.zoneId, zones.id));
+
+    const allCuisinesList = await db.select({ id: cuisines.id, name: cuisines.name }).from(cuisines);
+    const cuisineMap = new Map(allCuisinesList.map(c => [c.id, c]));
 
     const formatted = raw.map(r => ({
         id: r.id,
@@ -178,9 +188,7 @@ export const getAllRestaurants = async (req: Request, res: Response) => {
         cover: r.cover,
         status: r.status,
 
-        cuisine: r.cuisine_id
-            ? { id: r.cuisine_id, name: r.cuisine_name }
-            : null,
+        cuisines: (r.cuisineIds || []).map((id: string) => cuisineMap.get(id)).filter(Boolean),
 
         zone: r.zone_id
             ? { id: r.zone_id, name: r.zone_name }
@@ -202,11 +210,9 @@ export const getRestaurantById = async (req: Request, res: Response) => {
     const rawRestaurants = await db
         .select({
             restaurantObj: restaurants,
-            cuisineObj: cuisines,
             zoneObj: zones,
         })
         .from(restaurants)
-        .leftJoin(cuisines, eq(restaurants.cuisineId, cuisines.id))
         .leftJoin(zones, eq(restaurants.zoneId, zones.id))
         .where(eq(restaurants.id, id))
         .limit(1);
@@ -215,13 +221,23 @@ export const getRestaurantById = async (req: Request, res: Response) => {
         throw new NotFound("Restaurant not found");
     }
 
-    // استخراج الصف الأول وتهيئته
     const row = rawRestaurants[0];
+    
+    let restaurantCuisines: any[] = [];
+    if (row.restaurantObj.cuisineId && row.restaurantObj.cuisineId.length > 0) {
+        restaurantCuisines = await db
+            .select({ id: cuisines.id, name: cuisines.name })
+            .from(cuisines)
+            .where(inArray(cuisines.id, row.restaurantObj.cuisineId));
+    }
+
     const formattedRestaurant = {
         ...row.restaurantObj,
-        cuisine: row.cuisineObj ? { id: row.cuisineObj.id, name: row.cuisineObj.name } : null,
+        cuisines: restaurantCuisines,
         zone: row.zoneObj ? { id: row.zoneObj.id, name: row.zoneObj.name } : null,
     };
+    
+    delete (formattedRestaurant as any).cuisineId;
 
     return SuccessResponse(res, { 
         message: "Get restaurant by id success", 
@@ -263,15 +279,19 @@ export const updateRestaurant = async (req: Request, res: Response) => {
     }
 
     // Validate cuisine if provided
-    if (cuisineId) {
-        const existingCuisine = await db
-            .select()
-            .from(cuisines)
-            .where(eq(cuisines.id, cuisineId))
-            .limit(1);
+    let parsedCuisines: string[] | undefined = undefined;
+    if (cuisineId !== undefined) {
+        parsedCuisines = typeof cuisineId === "string" ? JSON.parse(cuisineId) : cuisineId;
+        
+        if (parsedCuisines && parsedCuisines.length > 0) {
+            const existingCuisines = await db
+                .select()
+                .from(cuisines)
+                .where(inArray(cuisines.id, parsedCuisines));
 
-        if (!existingCuisine[0]) {
-            throw new BadRequest("Cuisine not found");
+            if (existingCuisines.length !== parsedCuisines.length) {
+                throw new BadRequest("One or more Cuisines not found");
+            }
         }
     }
 
@@ -305,7 +325,7 @@ export const updateRestaurant = async (req: Request, res: Response) => {
     if (address) updateData.address = address;
     if (addressAr) updateData.addressAr = addressAr;
     if (addressFr) updateData.addressFr = addressFr;
-    if (cuisineId !== undefined) updateData.cuisineId = cuisineId || null;
+    if (parsedCuisines !== undefined) updateData.cuisineId = parsedCuisines;
     if (zoneId) updateData.zoneId = zoneId;
     if (lat !== undefined) updateData.lat = lat;
     if (lng !== undefined) updateData.lng = lng;
@@ -340,14 +360,22 @@ export const updateRestaurant = async (req: Request, res: Response) => {
     await db.update(restaurants).set(updateData).where(eq(restaurants.id, id));
 
     // Handle cuisine count if cuisineId changed
-    if (cuisineId !== undefined && cuisineId !== existingRestaurant[0].cuisineId) {
-        // Decrement old cuisine count
-        if (existingRestaurant[0].cuisineId) {
-            await decrementCuisineCount(existingRestaurant[0].cuisineId);
+    if (parsedCuisines !== undefined) {
+        const oldCuisines = existingRestaurant[0].cuisineId || [];
+        const newCuisines = parsedCuisines || [];
+
+        // Decrement old cuisines that are not in new cuisines
+        for (const cid of oldCuisines) {
+            if (!newCuisines.includes(cid)) {
+                await decrementCuisineCount(cid);
+            }
         }
-        // Increment new cuisine count
-        if (cuisineId) {
-            await incrementCuisineCount(cuisineId);
+
+        // Increment new cuisines that are not in old cuisines
+        for (const cid of newCuisines) {
+            if (!oldCuisines.includes(cid)) {
+                await incrementCuisineCount(cid);
+            }
         }
     }
 
@@ -369,7 +397,9 @@ export const deleteRestaurant = async (req: Request, res: Response) => {
 
     // Decrement cuisine count before deleting
     if (existingRestaurant[0].cuisineId) {
-        await decrementCuisineCount(existingRestaurant[0].cuisineId);
+        for (const cid of existingRestaurant[0].cuisineId) {
+            await decrementCuisineCount(cid);
+        }
     }
 
     await db.delete(restaurants).where(eq(restaurants.id, id));

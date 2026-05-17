@@ -81,6 +81,10 @@ const createRestaurant = async (req, res) => {
     if (tags) {
         parsedTags = typeof tags === "string" ? JSON.parse(tags) : tags;
     }
+    let parsedCuisines = [];
+    if (cuisineId) {
+        parsedCuisines = typeof cuisineId === "string" ? JSON.parse(cuisineId) : cuisineId;
+    }
     await connection_1.db.transaction(async (tx) => {
         await tx.insert(schema_1.restaurants).values({
             id,
@@ -90,7 +94,7 @@ const createRestaurant = async (req, res) => {
             address: clean(address),
             addressAr: clean(addressAr),
             addressFr: clean(addressFr),
-            cuisineId: cuisineId || null,
+            cuisineId: parsedCuisines,
             zoneId: clean(zoneId),
             logo: logoUrl || '',
             cover: coverUrl || '',
@@ -118,6 +122,9 @@ const createRestaurant = async (req, res) => {
             totalEarning: "0.00",
         });
     });
+    for (const cid of parsedCuisines) {
+        await incrementCuisineCount(cid);
+    }
     return (0, response_1.SuccessResponse)(res, {
         message: "Restaurant created successfully",
         data: { id }
@@ -136,14 +143,14 @@ const getAllRestaurants = async (req, res) => {
         logo: schema_1.restaurants.logo,
         cover: schema_1.restaurants.cover,
         status: schema_1.restaurants.status,
-        cuisine_id: schema_1.cuisines.id,
-        cuisine_name: schema_1.cuisines.name,
+        cuisineIds: schema_1.restaurants.cuisineId,
         zone_id: schema_1.zones.id,
         zone_name: schema_1.zones.name,
     })
         .from(schema_1.restaurants)
-        .leftJoin(schema_1.cuisines, (0, drizzle_orm_1.eq)(schema_1.restaurants.cuisineId, schema_1.cuisines.id))
         .leftJoin(schema_1.zones, (0, drizzle_orm_1.eq)(schema_1.restaurants.zoneId, schema_1.zones.id));
+    const allCuisinesList = await connection_1.db.select({ id: schema_1.cuisines.id, name: schema_1.cuisines.name }).from(schema_1.cuisines);
+    const cuisineMap = new Map(allCuisinesList.map(c => [c.id, c]));
     const formatted = raw.map(r => ({
         id: r.id,
         name: r.name,
@@ -155,9 +162,7 @@ const getAllRestaurants = async (req, res) => {
         logo: r.logo,
         cover: r.cover,
         status: r.status,
-        cuisine: r.cuisine_id
-            ? { id: r.cuisine_id, name: r.cuisine_name }
-            : null,
+        cuisines: (r.cuisineIds || []).map((id) => cuisineMap.get(id)).filter(Boolean),
         zone: r.zone_id
             ? { id: r.zone_id, name: r.zone_name }
             : null,
@@ -176,24 +181,29 @@ const getRestaurantById = async (req, res) => {
     const rawRestaurants = await connection_1.db
         .select({
         restaurantObj: schema_1.restaurants,
-        cuisineObj: schema_1.cuisines,
         zoneObj: schema_1.zones,
     })
         .from(schema_1.restaurants)
-        .leftJoin(schema_1.cuisines, (0, drizzle_orm_1.eq)(schema_1.restaurants.cuisineId, schema_1.cuisines.id))
         .leftJoin(schema_1.zones, (0, drizzle_orm_1.eq)(schema_1.restaurants.zoneId, schema_1.zones.id))
         .where((0, drizzle_orm_1.eq)(schema_1.restaurants.id, id))
         .limit(1);
     if (!rawRestaurants[0]) {
         throw new NotFound_1.NotFound("Restaurant not found");
     }
-    // استخراج الصف الأول وتهيئته
     const row = rawRestaurants[0];
+    let restaurantCuisines = [];
+    if (row.restaurantObj.cuisineId && row.restaurantObj.cuisineId.length > 0) {
+        restaurantCuisines = await connection_1.db
+            .select({ id: schema_1.cuisines.id, name: schema_1.cuisines.name })
+            .from(schema_1.cuisines)
+            .where((0, drizzle_orm_1.inArray)(schema_1.cuisines.id, row.restaurantObj.cuisineId));
+    }
     const formattedRestaurant = {
         ...row.restaurantObj,
-        cuisine: row.cuisineObj ? { id: row.cuisineObj.id, name: row.cuisineObj.name } : null,
+        cuisines: restaurantCuisines,
         zone: row.zoneObj ? { id: row.zoneObj.id, name: row.zoneObj.name } : null,
     };
+    delete formattedRestaurant.cuisineId;
     return (0, response_1.SuccessResponse)(res, {
         message: "Get restaurant by id success",
         data: formattedRestaurant
@@ -223,14 +233,17 @@ const updateRestaurant = async (req, res) => {
         }
     }
     // Validate cuisine if provided
-    if (cuisineId) {
-        const existingCuisine = await connection_1.db
-            .select()
-            .from(schema_1.cuisines)
-            .where((0, drizzle_orm_1.eq)(schema_1.cuisines.id, cuisineId))
-            .limit(1);
-        if (!existingCuisine[0]) {
-            throw new BadRequest_1.BadRequest("Cuisine not found");
+    let parsedCuisines = undefined;
+    if (cuisineId !== undefined) {
+        parsedCuisines = typeof cuisineId === "string" ? JSON.parse(cuisineId) : cuisineId;
+        if (parsedCuisines && parsedCuisines.length > 0) {
+            const existingCuisines = await connection_1.db
+                .select()
+                .from(schema_1.cuisines)
+                .where((0, drizzle_orm_1.inArray)(schema_1.cuisines.id, parsedCuisines));
+            if (existingCuisines.length !== parsedCuisines.length) {
+                throw new BadRequest_1.BadRequest("One or more Cuisines not found");
+            }
         }
     }
     // Validate email uniqueness if changed
@@ -265,8 +278,8 @@ const updateRestaurant = async (req, res) => {
         updateData.addressAr = addressAr;
     if (addressFr)
         updateData.addressFr = addressFr;
-    if (cuisineId !== undefined)
-        updateData.cuisineId = cuisineId || null;
+    if (parsedCuisines !== undefined)
+        updateData.cuisineId = parsedCuisines;
     if (zoneId)
         updateData.zoneId = zoneId;
     if (lat !== undefined)
@@ -315,14 +328,20 @@ const updateRestaurant = async (req, res) => {
     }
     await connection_1.db.update(schema_1.restaurants).set(updateData).where((0, drizzle_orm_1.eq)(schema_1.restaurants.id, id));
     // Handle cuisine count if cuisineId changed
-    if (cuisineId !== undefined && cuisineId !== existingRestaurant[0].cuisineId) {
-        // Decrement old cuisine count
-        if (existingRestaurant[0].cuisineId) {
-            await decrementCuisineCount(existingRestaurant[0].cuisineId);
+    if (parsedCuisines !== undefined) {
+        const oldCuisines = existingRestaurant[0].cuisineId || [];
+        const newCuisines = parsedCuisines || [];
+        // Decrement old cuisines that are not in new cuisines
+        for (const cid of oldCuisines) {
+            if (!newCuisines.includes(cid)) {
+                await decrementCuisineCount(cid);
+            }
         }
-        // Increment new cuisine count
-        if (cuisineId) {
-            await incrementCuisineCount(cuisineId);
+        // Increment new cuisines that are not in old cuisines
+        for (const cid of newCuisines) {
+            if (!oldCuisines.includes(cid)) {
+                await incrementCuisineCount(cid);
+            }
         }
     }
     return (0, response_1.SuccessResponse)(res, { message: "Update restaurant success" });
@@ -340,7 +359,9 @@ const deleteRestaurant = async (req, res) => {
     }
     // Decrement cuisine count before deleting
     if (existingRestaurant[0].cuisineId) {
-        await decrementCuisineCount(existingRestaurant[0].cuisineId);
+        for (const cid of existingRestaurant[0].cuisineId) {
+            await decrementCuisineCount(cid);
+        }
     }
     await connection_1.db.delete(schema_1.restaurants).where((0, drizzle_orm_1.eq)(schema_1.restaurants.id, id));
     return (0, response_1.SuccessResponse)(res, { message: "Delete restaurant success" });

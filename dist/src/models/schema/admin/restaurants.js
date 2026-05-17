@@ -5,7 +5,6 @@ const mysql_core_1 = require("drizzle-orm/mysql-core");
 const drizzle_orm_1 = require("drizzle-orm");
 // ⚠️ تأكد من استيراد الجداول دي من مساراتها الصحيحة عندك
 const zone_1 = require("./zone");
-const Cuisine_1 = require("./Cuisine ");
 exports.restaurants = (0, mysql_core_1.mysqlTable)("restaurants", {
     id: (0, mysql_core_1.char)("id", { length: 36 }).primaryKey().default((0, drizzle_orm_1.sql) `(UUID())`),
     // ==========================================
@@ -18,7 +17,7 @@ exports.restaurants = (0, mysql_core_1.mysqlTable)("restaurants", {
     addressAr: (0, mysql_core_1.text)("address_ar").notNull().default(''),
     addressFr: (0, mysql_core_1.text)("address_fr").notNull().default(''),
     // العلاقات (Relations)
-    cuisineId: (0, mysql_core_1.char)("cuisine_id", { length: 36 }).references(() => Cuisine_1.cuisines.id),
+    cuisineId: (0, mysql_core_1.json)("cuisine_id").$type().default([]),
     zoneId: (0, mysql_core_1.char)("zone_id", { length: 36 }).references(() => zone_1.zones.id).notNull(),
     // الصور (Files/Images)
     logo: (0, mysql_core_1.varchar)("logo", { length: 500 }).notNull(),
