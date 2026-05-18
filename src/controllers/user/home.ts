@@ -37,21 +37,29 @@ export const getHomeScreen = async (req: Request, res: Response) => {
     const activeCuisines = await db.select({
         id: cuisines.id,
         name: cuisines.name,
+        nameAr: cuisines.nameAr,
+        nameFr: cuisines.nameFr,
         image: cuisines.Image
     }).from(cuisines).where(eq(cuisines.status, "active"));
 
     const activeCategories = await db.select({
         id: categories.id,
         name: categories.name,
+        nameAr: categories.nameAr,
+        nameFr: categories.nameFr,
         image: categories.Image
     }).from(categories).where(eq(categories.status, "active"));
 
     const restaurantsData = await db.select({
         id: restaurants.id,
         name: restaurants.name,
+        nameAr: restaurants.nameAr,
+        nameFr: restaurants.nameFr,
         cover: restaurants.cover,
         logo: restaurants.logo,
         address: restaurants.address,
+        addressAr: restaurants.addressAr,
+        addressFr: restaurants.addressFr,
         minDeliveryTime: restaurants.minDeliveryTime,
     }).from(restaurants).where(eq(restaurants.status, "active"));
 
@@ -81,9 +89,13 @@ export const getRestaurantsByCuisine = async (req: Request, res: Response) => {
     const data = await db.select({
         id: restaurants.id,
         name: restaurants.name,
+        nameAr: restaurants.nameAr,
+        nameFr: restaurants.nameFr,
         cover: restaurants.cover,
         logo: restaurants.logo,
         address: restaurants.address,
+        addressAr: restaurants.addressAr,
+        addressFr: restaurants.addressFr,
         minDeliveryTime: restaurants.minDeliveryTime,
     }).from(restaurants)
     .where(and(
@@ -110,10 +122,14 @@ export const getFoodsByCategory = async (req: Request, res: Response) => {
     const data = await db.select({
         foodId: food.id,
         foodName: food.name,
+        foodNameAr: food.nameAr,
+        foodNameFr: food.nameFr,
         foodImage: food.image,
         price: food.price,
         restaurantId: restaurants.id,
         restaurantName: restaurants.name,
+        restaurantNameAr: restaurants.nameAr,
+        restaurantNameFr: restaurants.nameFr,
         restaurantLogo: restaurants.logo
     })
     .from(food)
@@ -155,18 +171,26 @@ export const getRestaurantDetails = async (req: Request, res: Response) => {
     const rawMenu = await db.select({
         foodId: food.id,
         foodName: food.name,
+        foodNameAr: food.nameAr,
+        foodNameFr: food.nameFr,
         description: food.description,
+        descriptionAr: food.descriptionAr,
+        descriptionFr: food.descriptionFr,
         price: food.price,
         image: food.image,
         categoryName: categories.name,
         variationId: foodVariations.id,
         variationName: foodVariations.name,
+        variationNameAr: foodVariations.nameAr,
+        variationNameFr: foodVariations.nameFr,
         isRequired: foodVariations.isRequired,
         selectionType: foodVariations.selectionType,
         min: foodVariations.min,
         max: foodVariations.max,
         optionId: variationOptions.id,
         optionName: variationOptions.optionName,
+        optionNameAr: variationOptions.optionNameAr,
+        optionNameFr: variationOptions.optionNameFr,
         additionalPrice: variationOptions.additionalPrice
     })
     .from(food)
@@ -187,7 +211,11 @@ export const getRestaurantDetails = async (req: Request, res: Response) => {
             acc[catName][row.foodId] = {
                 id: row.foodId,
                 name: row.foodName,
+                nameAr: row.foodNameAr,
+                nameFr: row.foodNameFr,
                 description: row.description,
+                descriptionAr: row.descriptionAr,
+                descriptionFr: row.descriptionFr,
                 price: row.price,
                 image: row.image,
                 isFavorite: userId ? favoriteFoodIds.has(row.foodId) : false,
@@ -200,6 +228,8 @@ export const getRestaurantDetails = async (req: Request, res: Response) => {
                 acc[catName][row.foodId].variations[row.variationId] = {
                     id: row.variationId,
                     name: row.variationName,
+                    nameAr: row.variationNameAr,
+                    nameFr: row.variationNameFr,
                     isRequired: row.isRequired,
                     selectionType: row.selectionType,
                     min: row.min,
@@ -212,6 +242,8 @@ export const getRestaurantDetails = async (req: Request, res: Response) => {
                 acc[catName][row.foodId].variations[row.variationId].options.push({
                     id: row.optionId,
                     name: row.optionName,
+                    nameAr: row.optionNameAr,
+                    nameFr: row.optionNameFr,
                     additionalPrice: row.additionalPrice
                 });
             }
@@ -287,15 +319,21 @@ export const getUserFavorites = async (req: Request, res: Response) => {
         restaurant: {
             id: restaurants.id,
             name: restaurants.name,
+            nameAr: restaurants.nameAr,
+            nameFr: restaurants.nameFr,
             cover: restaurants.cover,
             logo: restaurants.logo,
             address: restaurants.address,
+            addressAr: restaurants.addressAr,
+            addressFr: restaurants.addressFr,
             
         },
         // بيانات الأكلة (ستكون null لو كان السجل يخص مطعم)
         food: {
             id: food.id,
             name: food.name,
+            nameAr: food.nameAr,
+            nameFr: food.nameFr,
             price: food.price,
             image: food.image,
         }

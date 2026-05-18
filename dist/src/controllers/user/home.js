@@ -35,19 +35,27 @@ const getHomeScreen = async (req, res) => {
     const activeCuisines = await connection_1.db.select({
         id: schema_1.cuisines.id,
         name: schema_1.cuisines.name,
+        nameAr: schema_1.cuisines.nameAr,
+        nameFr: schema_1.cuisines.nameFr,
         image: schema_1.cuisines.Image
     }).from(schema_1.cuisines).where((0, drizzle_orm_1.eq)(schema_1.cuisines.status, "active"));
     const activeCategories = await connection_1.db.select({
         id: schema_1.categories.id,
         name: schema_1.categories.name,
+        nameAr: schema_1.categories.nameAr,
+        nameFr: schema_1.categories.nameFr,
         image: schema_1.categories.Image
     }).from(schema_1.categories).where((0, drizzle_orm_1.eq)(schema_1.categories.status, "active"));
     const restaurantsData = await connection_1.db.select({
         id: schema_1.restaurants.id,
         name: schema_1.restaurants.name,
+        nameAr: schema_1.restaurants.nameAr,
+        nameFr: schema_1.restaurants.nameFr,
         cover: schema_1.restaurants.cover,
         logo: schema_1.restaurants.logo,
         address: schema_1.restaurants.address,
+        addressAr: schema_1.restaurants.addressAr,
+        addressFr: schema_1.restaurants.addressFr,
         minDeliveryTime: schema_1.restaurants.minDeliveryTime,
     }).from(schema_1.restaurants).where((0, drizzle_orm_1.eq)(schema_1.restaurants.status, "active"));
     const popularRestaurants = restaurantsData.map(r => ({
@@ -73,9 +81,13 @@ const getRestaurantsByCuisine = async (req, res) => {
     const data = await connection_1.db.select({
         id: schema_1.restaurants.id,
         name: schema_1.restaurants.name,
+        nameAr: schema_1.restaurants.nameAr,
+        nameFr: schema_1.restaurants.nameFr,
         cover: schema_1.restaurants.cover,
         logo: schema_1.restaurants.logo,
         address: schema_1.restaurants.address,
+        addressAr: schema_1.restaurants.addressAr,
+        addressFr: schema_1.restaurants.addressFr,
         minDeliveryTime: schema_1.restaurants.minDeliveryTime,
     }).from(schema_1.restaurants)
         .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.sql) `JSON_CONTAINS(${schema_1.restaurants.cuisineId}, ${JSON.stringify(cuisineId)})`));
@@ -96,10 +108,14 @@ const getFoodsByCategory = async (req, res) => {
     const data = await connection_1.db.select({
         foodId: schema_1.food.id,
         foodName: schema_1.food.name,
+        foodNameAr: schema_1.food.nameAr,
+        foodNameFr: schema_1.food.nameFr,
         foodImage: schema_1.food.image,
         price: schema_1.food.price,
         restaurantId: schema_1.restaurants.id,
         restaurantName: schema_1.restaurants.name,
+        restaurantNameAr: schema_1.restaurants.nameAr,
+        restaurantNameFr: schema_1.restaurants.nameFr,
         restaurantLogo: schema_1.restaurants.logo
     })
         .from(schema_1.food)
@@ -131,18 +147,26 @@ const getRestaurantDetails = async (req, res) => {
     const rawMenu = await connection_1.db.select({
         foodId: schema_1.food.id,
         foodName: schema_1.food.name,
+        foodNameAr: schema_1.food.nameAr,
+        foodNameFr: schema_1.food.nameFr,
         description: schema_1.food.description,
+        descriptionAr: schema_1.food.descriptionAr,
+        descriptionFr: schema_1.food.descriptionFr,
         price: schema_1.food.price,
         image: schema_1.food.image,
         categoryName: schema_1.categories.name,
         variationId: schema_1.foodVariations.id,
         variationName: schema_1.foodVariations.name,
+        variationNameAr: schema_1.foodVariations.nameAr,
+        variationNameFr: schema_1.foodVariations.nameFr,
         isRequired: schema_1.foodVariations.isRequired,
         selectionType: schema_1.foodVariations.selectionType,
         min: schema_1.foodVariations.min,
         max: schema_1.foodVariations.max,
         optionId: schema_1.variationOptions.id,
         optionName: schema_1.variationOptions.optionName,
+        optionNameAr: schema_1.variationOptions.optionNameAr,
+        optionNameFr: schema_1.variationOptions.optionNameFr,
         additionalPrice: schema_1.variationOptions.additionalPrice
     })
         .from(schema_1.food)
@@ -158,7 +182,11 @@ const getRestaurantDetails = async (req, res) => {
             acc[catName][row.foodId] = {
                 id: row.foodId,
                 name: row.foodName,
+                nameAr: row.foodNameAr,
+                nameFr: row.foodNameFr,
                 description: row.description,
+                descriptionAr: row.descriptionAr,
+                descriptionFr: row.descriptionFr,
                 price: row.price,
                 image: row.image,
                 isFavorite: userId ? favoriteFoodIds.has(row.foodId) : false,
@@ -170,6 +198,8 @@ const getRestaurantDetails = async (req, res) => {
                 acc[catName][row.foodId].variations[row.variationId] = {
                     id: row.variationId,
                     name: row.variationName,
+                    nameAr: row.variationNameAr,
+                    nameFr: row.variationNameFr,
                     isRequired: row.isRequired,
                     selectionType: row.selectionType,
                     min: row.min,
@@ -181,6 +211,8 @@ const getRestaurantDetails = async (req, res) => {
                 acc[catName][row.foodId].variations[row.variationId].options.push({
                     id: row.optionId,
                     name: row.optionName,
+                    nameAr: row.optionNameAr,
+                    nameFr: row.optionNameFr,
                     additionalPrice: row.additionalPrice
                 });
             }
@@ -246,14 +278,20 @@ const getUserFavorites = async (req, res) => {
         restaurant: {
             id: schema_1.restaurants.id,
             name: schema_1.restaurants.name,
+            nameAr: schema_1.restaurants.nameAr,
+            nameFr: schema_1.restaurants.nameFr,
             cover: schema_1.restaurants.cover,
             logo: schema_1.restaurants.logo,
             address: schema_1.restaurants.address,
+            addressAr: schema_1.restaurants.addressAr,
+            addressFr: schema_1.restaurants.addressFr,
         },
         // بيانات الأكلة (ستكون null لو كان السجل يخص مطعم)
         food: {
             id: schema_1.food.id,
             name: schema_1.food.name,
+            nameAr: schema_1.food.nameAr,
+            nameFr: schema_1.food.nameFr,
             price: schema_1.food.price,
             image: schema_1.food.image,
         }

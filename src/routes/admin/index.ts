@@ -19,6 +19,7 @@ import BussinessplanRouter from "./BusinessPlans";
 import restaurantsettingRouter from "./restaurantsetting";
 import payment_methodsRouter from "./payment_methods";
 import OrderRouter from "./order"
+import imageRouter from "./image";
 import user_walletsRouter from "./userWallets";
 import SelectReasonsRouter from "./selectReasons";
 import ReportRouter from "./Report"
@@ -41,6 +42,7 @@ router.use("/cuisines", CuisineRouter);
 router.use("/categories", CategoryRouter);
 router.use("/subcategories", SubcategoryRouter);
 router.use("/order", OrderRouter);
+router.use("/image", imageRouter);
 router.use("/policy", policyRouter);
 router.use("/adonescategory", AdonecategoryRouter);
 router.use("/restaurants", RestaurantRouter);
