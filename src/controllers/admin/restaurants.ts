@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { db } from "../../models/connection";
-import { restaurants, cuisines, zones, restaurantWallets } from "../../models/schema";
+import { restaurants, cuisines, zones, restaurantWallets, food } from "../../models/schema";
 import { eq, sql, inArray } from "drizzle-orm";
 import { SuccessResponse } from "../../utils/response";
 import { NotFound } from "../../Errors/NotFound";
@@ -411,13 +411,25 @@ export const deleteRestaurant = async (req: Request, res: Response) => {
         throw new NotFound("Restaurant not found");
     }
 
-    // Decrement cuisine count before deleting
+    // 1. Decrement cuisine count before deleting
     if (existingRestaurant[0].cuisineId) {
         for (const cid of existingRestaurant[0].cuisineId) {
             await decrementCuisineCount(cid);
         }
     }
 
+    // ==========================================
+    // 2. التعديل الجديد: حذف السجلات المرتبطة (Child Records) أولاً
+    // ==========================================
+    // حذف جميع الأكلات المرتبطة بهذا المطعم لتجنب خطأ 500
+    await db.delete(food).where(eq(food.restaurantid, id));
+    
+    // 💡 ملاحظة: إذا كان لديك جداول أخرى مرتبطة برقم المطعم (مثل الطلبات orders، أو الموظفين staff، أو التقييمات reviews)
+    // يجب إضافة كود حذفها هنا أيضاً بنفس الطريقة قبل حذف المطعم.
+
+    // ==========================================
+    // 3. أخيرًا، حذف المطعم نفسه
+    // ==========================================
     await db.delete(restaurants).where(eq(restaurants.id, id));
 
     return SuccessResponse(res, { message: "Delete restaurant success" });

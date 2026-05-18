@@ -373,12 +373,22 @@ const deleteRestaurant = async (req, res) => {
     if (!existingRestaurant[0]) {
         throw new NotFound_1.NotFound("Restaurant not found");
     }
-    // Decrement cuisine count before deleting
+    // 1. Decrement cuisine count before deleting
     if (existingRestaurant[0].cuisineId) {
         for (const cid of existingRestaurant[0].cuisineId) {
             await decrementCuisineCount(cid);
         }
     }
+    // ==========================================
+    // 2. التعديل الجديد: حذف السجلات المرتبطة (Child Records) أولاً
+    // ==========================================
+    // حذف جميع الأكلات المرتبطة بهذا المطعم لتجنب خطأ 500
+    await connection_1.db.delete(schema_1.food).where((0, drizzle_orm_1.eq)(schema_1.food.restaurantid, id));
+    // 💡 ملاحظة: إذا كان لديك جداول أخرى مرتبطة برقم المطعم (مثل الطلبات orders، أو الموظفين staff، أو التقييمات reviews)
+    // يجب إضافة كود حذفها هنا أيضاً بنفس الطريقة قبل حذف المطعم.
+    // ==========================================
+    // 3. أخيرًا، حذف المطعم نفسه
+    // ==========================================
     await connection_1.db.delete(schema_1.restaurants).where((0, drizzle_orm_1.eq)(schema_1.restaurants.id, id));
     return (0, response_1.SuccessResponse)(res, { message: "Delete restaurant success" });
 };

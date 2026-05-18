@@ -13,7 +13,10 @@ exports.food = (0, mysql_core_1.mysqlTable)("food", {
     descriptionAr: (0, mysql_core_1.text)("description_ar").notNull().default(''),
     descriptionFr: (0, mysql_core_1.text)("description_fr").notNull().default(''),
     image: (0, mysql_core_1.varchar)("image", { length: 500 }).notNull(),
-    restaurantid: (0, mysql_core_1.char)("restaurantid", { length: 36 }).references(() => schema_1.restaurants.id).notNull(),
+    // 👇 هنا التعديل: إضافة { onDelete: "cascade" } لحل مشكلة الحذف
+    restaurantid: (0, mysql_core_1.char)("restaurantid", { length: 36 })
+        .references(() => schema_1.restaurants.id, { onDelete: "cascade" })
+        .notNull(),
     categoryid: (0, mysql_core_1.char)("categoryid", { length: 36 }).references(() => schema_1.categories.id).notNull(),
     subcategoryid: (0, mysql_core_1.char)("subcategoryid", { length: 36 }).references(() => schema_1.subcategories.id).notNull(),
     foodtype: (0, mysql_core_1.mysqlEnum)("foodtype", ["veg", "non-veg"]).default("veg"),
@@ -23,9 +26,7 @@ exports.food = (0, mysql_core_1.mysqlTable)("food", {
     addonsId: (0, mysql_core_1.char)("addons_id", { length: 36 }).references(() => schema_1.addons.id),
     startTime: (0, mysql_core_1.varchar)("start_time", { length: 255 }).notNull(),
     endTime: (0, mysql_core_1.varchar)("end_time", { length: 255 }).notNull(),
-    // 👇 ركز هنا: التأكد من الاسم الجديد بدون حرف الـ e
     search_tags: (0, mysql_core_1.varchar)("search_tags", { length: 255 }),
-    // 👇 التأكد من الأنواع الجديدة DECIMAL و INT
     price: (0, mysql_core_1.decimal)("price", { precision: 10, scale: 2 }).notNull(),
     discount_type: (0, mysql_core_1.mysqlEnum)("discount_type", ["percentage", "amount"]).default("percentage"),
     discount_value: (0, mysql_core_1.decimal)("discount_value", { precision: 10, scale: 2 }),
