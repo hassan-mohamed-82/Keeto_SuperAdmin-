@@ -412,6 +412,15 @@ const deleteFood = async (req, res) => {
     const existingFood = await connection_1.db.select().from(schema_1.food).where((0, drizzle_orm_1.eq)(schema_1.food.id, id)).limit(1);
     if (!existingFood[0])
         throw new NotFound_1.NotFound("Food not found");
+    // Prevent deletion if it's referenced in orders
+    const inOrders = await connection_1.db.select().from(schema_1.orderItems).where((0, drizzle_orm_1.eq)(schema_1.orderItems.foodId, id)).limit(1);
+    if (inOrders[0]) {
+        throw new BadRequest_1.BadRequest("Cannot delete this food because it is associated with existing orders. Please set its status to inactive instead.");
+    }
+    // Delete safe references
+    await connection_1.db.delete(schema_1.cartItems).where((0, drizzle_orm_1.eq)(schema_1.cartItems.foodId, id));
+    await connection_1.db.delete(schema_1.favorites).where((0, drizzle_orm_1.eq)(schema_1.favorites.foodId, id));
+    await connection_1.db.delete(schema_1.branchMenuItems).where((0, drizzle_orm_1.eq)(schema_1.branchMenuItems.foodId, id));
     const vars = await connection_1.db.select().from(schema_1.foodVariations).where((0, drizzle_orm_1.eq)(schema_1.foodVariations.foodId, id));
     for (const v of vars) {
         await connection_1.db.delete(schema_1.variationOptions).where((0, drizzle_orm_1.eq)(schema_1.variationOptions.variationId, v.id));

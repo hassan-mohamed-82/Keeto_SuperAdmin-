@@ -8,6 +8,10 @@ import {
     categories,
     subcategories,
     addons,
+    cartItems,
+    favorites,
+    orderItems,
+    branchMenuItems,
 } from "../../models/schema";
 import { eq, inArray, and } from "drizzle-orm";
 import { SuccessResponse } from "../../utils/response";
@@ -560,6 +564,17 @@ export const deleteFood = async (req: Request, res: Response) => {
 
     const existingFood = await db.select().from(food).where(eq(food.id, id)).limit(1);
     if (!existingFood[0]) throw new NotFound("Food not found");
+
+    // Prevent deletion if it's referenced in orders
+    const inOrders = await db.select().from(orderItems).where(eq(orderItems.foodId, id)).limit(1);
+    if (inOrders[0]) {
+        throw new BadRequest("Cannot delete this food because it is associated with existing orders. Please set its status to inactive instead.");
+    }
+
+    // Delete safe references
+    await db.delete(cartItems).where(eq(cartItems.foodId, id));
+    await db.delete(favorites).where(eq(favorites.foodId, id));
+    await db.delete(branchMenuItems).where(eq(branchMenuItems.foodId, id));
 
     const vars = await db.select().from(foodVariations).where(eq(foodVariations.foodId, id));
 
