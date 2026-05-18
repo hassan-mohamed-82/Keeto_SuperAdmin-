@@ -202,12 +202,23 @@ const getRestaurantById = async (req, res) => {
         throw new NotFound_1.NotFound("Restaurant not found");
     }
     const row = rawRestaurants[0];
+    let parsedCuisines = [];
+    if (row.restaurantObj.cuisineId) {
+        try {
+            parsedCuisines = typeof row.restaurantObj.cuisineId === "string"
+                ? JSON.parse(row.restaurantObj.cuisineId)
+                : row.restaurantObj.cuisineId;
+        }
+        catch (e) {
+            parsedCuisines = [];
+        }
+    }
     let restaurantCuisines = [];
-    if (row.restaurantObj.cuisineId && row.restaurantObj.cuisineId.length > 0) {
+    if (parsedCuisines && parsedCuisines.length > 0) {
         restaurantCuisines = await connection_1.db
             .select({ id: schema_1.cuisines.id, name: schema_1.cuisines.name })
             .from(schema_1.cuisines)
-            .where((0, drizzle_orm_1.inArray)(schema_1.cuisines.id, row.restaurantObj.cuisineId));
+            .where((0, drizzle_orm_1.inArray)(schema_1.cuisines.id, parsedCuisines));
     }
     const formattedRestaurant = {
         ...row.restaurantObj,

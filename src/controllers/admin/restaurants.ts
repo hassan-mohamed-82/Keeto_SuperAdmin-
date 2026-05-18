@@ -234,12 +234,23 @@ export const getRestaurantById = async (req: Request, res: Response) => {
 
     const row = rawRestaurants[0];
     
+    let parsedCuisines: string[] = [];
+    if (row.restaurantObj.cuisineId) {
+        try {
+            parsedCuisines = typeof row.restaurantObj.cuisineId === "string" 
+                ? JSON.parse(row.restaurantObj.cuisineId) 
+                : row.restaurantObj.cuisineId;
+        } catch (e) {
+            parsedCuisines = [];
+        }
+    }
+
     let restaurantCuisines: any[] = [];
-    if (row.restaurantObj.cuisineId && row.restaurantObj.cuisineId.length > 0) {
+    if (parsedCuisines && parsedCuisines.length > 0) {
         restaurantCuisines = await db
             .select({ id: cuisines.id, name: cuisines.name })
             .from(cuisines)
-            .where(inArray(cuisines.id, row.restaurantObj.cuisineId));
+            .where(inArray(cuisines.id, parsedCuisines));
     }
 
     const formattedRestaurant = {
