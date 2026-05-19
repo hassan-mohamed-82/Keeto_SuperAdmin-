@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { db } from "../../models/connection";
-import { coupons, couponUsages, orders } from "../../models/schema";
+import { coupons, couponUsages, orders, couponRestaurants } from "../../models/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { SuccessResponse } from "../../utils/response";
 import { BadRequest } from "../../Errors/BadRequest";
@@ -40,7 +40,6 @@ export const createCoupon = async (req: Request, res: Response) => {
 
     await db.insert(coupons).values({
         id,
-        restaurantId: Array.isArray(restaurantId) ? restaurantId : restaurantId ? [restaurantId] : [],
         code: code.toUpperCase().trim(),
         name,
         nameAr: nameAr || null,
@@ -56,6 +55,18 @@ export const createCoupon = async (req: Request, res: Response) => {
         isActive: isActive !== undefined ? isActive : true,
     });
 
+    if (restaurantId) {
+        const rIds = Array.isArray(restaurantId) ? restaurantId : [restaurantId];
+        if (rIds.length > 0) {
+            const crData = rIds.map((rId: string) => ({
+                id: uuidv4(),
+                couponId: id,
+                restaurantId: rId,
+            }));
+            await db.insert(couponRestaurants).values(crData);
+        }
+    }
+
     return SuccessResponse(res, { message: "Coupon created successfully", data: { id } }, 201);
 };
 
@@ -66,10 +77,13 @@ export const getAllCoupons = async (req: Request, res: Response) => {
     const restaurantId = req.user?.restaurantId || req.user?.id;
     if (!restaurantId) throw new BadRequest("Unauthorized");
 
-    const allCoupons = await db
+    const rawCoupons = await db
         .select()
         .from(coupons)
-        .where(sql`JSON_CONTAINS(${coupons.restaurantId}, ${JSON.stringify(restaurantId)})`);
+        .innerJoin(couponRestaurants, eq(coupons.id, couponRestaurants.couponId))
+        .where(eq(couponRestaurants.restaurantId, restaurantId));
+
+    const allCoupons = rawCoupons.map(r => r.coupons);
 
     return SuccessResponse(res, { message: "Get all coupons success", data: allCoupons });
 };
@@ -82,13 +96,16 @@ export const getCouponById = async (req: Request, res: Response) => {
     const restaurantId = req.user?.restaurantId || req.user?.id;
     if (!restaurantId) throw new BadRequest("Unauthorized");
 
-    const [coupon] = await db
+    const [rawCoupon] = await db
         .select()
         .from(coupons)
-        .where(and(eq(coupons.id, id), sql`JSON_CONTAINS(${coupons.restaurantId}, ${JSON.stringify(restaurantId)})`))
+        .innerJoin(couponRestaurants, eq(coupons.id, couponRestaurants.couponId))
+        .where(and(eq(coupons.id, id), eq(couponRestaurants.restaurantId, restaurantId)))
         .limit(1);
 
-    if (!coupon) throw new NotFound("Coupon not found");
+    if (!rawCoupon) throw new NotFound("Coupon not found");
+
+    const coupon = rawCoupon.coupons;
 
     return SuccessResponse(res, { message: "Get coupon success", data: coupon });
 };
@@ -104,7 +121,8 @@ export const updateCoupon = async (req: Request, res: Response) => {
     const [existing] = await db
         .select()
         .from(coupons)
-        .where(and(eq(coupons.id, id), sql`JSON_CONTAINS(${coupons.restaurantId}, ${JSON.stringify(restaurantId)})`))
+        .innerJoin(couponRestaurants, eq(coupons.id, couponRestaurants.couponId))
+        .where(and(eq(coupons.id, id), eq(couponRestaurants.restaurantId, restaurantId)))
         .limit(1);
 
     if (!existing) throw new NotFound("Coupon not found");
@@ -118,7 +136,7 @@ export const updateCoupon = async (req: Request, res: Response) => {
     } = req.body;
 
     // If changing code, check uniqueness
-    if (code && code.toUpperCase() !== existing.code) {
+    if (code && code.toUpperCase() !== existing.coupons.code) {
         const [duplicate] = await db
             .select({ id: coupons.id })
             .from(coupons)
@@ -142,9 +160,21 @@ export const updateCoupon = async (req: Request, res: Response) => {
     if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null;
     if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
     if (isActive !== undefined) updateData.isActive = isActive;
-    if (updatedRestaurantId !== undefined) updateData.restaurantId = Array.isArray(updatedRestaurantId) ? updatedRestaurantId : [updatedRestaurantId];
 
     await db.update(coupons).set(updateData).where(eq(coupons.id, id));
+
+    if (updatedRestaurantId !== undefined) {
+        await db.delete(couponRestaurants).where(eq(couponRestaurants.couponId, id));
+        const rIds = Array.isArray(updatedRestaurantId) ? updatedRestaurantId : [updatedRestaurantId];
+        if (rIds.length > 0) {
+            const crData = rIds.map((rId: string) => ({
+                id: uuidv4(),
+                couponId: id,
+                restaurantId: rId,
+            }));
+            await db.insert(couponRestaurants).values(crData);
+        }
+    }
 
     return SuccessResponse(res, { message: "Coupon updated successfully" });
 };
@@ -160,13 +190,15 @@ export const deleteCoupon = async (req: Request, res: Response) => {
     const [existing] = await db
         .select()
         .from(coupons)
-        .where(and(eq(coupons.id, id), sql`JSON_CONTAINS(${coupons.restaurantId}, ${JSON.stringify(restaurantId)})`))
+        .innerJoin(couponRestaurants, eq(coupons.id, couponRestaurants.couponId))
+        .where(and(eq(coupons.id, id), eq(couponRestaurants.restaurantId, restaurantId)))
         .limit(1);
 
     if (!existing) throw new NotFound("Coupon not found");
 
     // Delete usage records first
     await db.delete(couponUsages).where(eq(couponUsages.couponId, id));
+    await db.delete(couponRestaurants).where(eq(couponRestaurants.couponId, id));
     await db.delete(coupons).where(eq(coupons.id, id));
 
     return SuccessResponse(res, { message: "Coupon deleted successfully" });
@@ -180,21 +212,23 @@ export const toggleCouponStatus = async (req: Request, res: Response) => {
     const restaurantId = req.user?.restaurantId || req.user?.id;
     if (!restaurantId) throw new BadRequest("Unauthorized");
 
-    const [existing] = await db
+    const [rawExisting] = await db
         .select()
         .from(coupons)
-        .where(and(eq(coupons.id, id), sql`JSON_CONTAINS(${coupons.restaurantId}, ${JSON.stringify(restaurantId)})`))
+        .innerJoin(couponRestaurants, eq(coupons.id, couponRestaurants.couponId))
+        .where(and(eq(coupons.id, id), eq(couponRestaurants.restaurantId, restaurantId)))
         .limit(1);
 
-    if (!existing) throw new NotFound("Coupon not found");
+    if (!rawExisting) throw new NotFound("Coupon not found");
+    const existingCoupon = rawExisting.coupons;
 
     await db.update(coupons)
-        .set({ isActive: !existing.isActive, updatedAt: new Date() })
+        .set({ isActive: !existingCoupon.isActive, updatedAt: new Date() })
         .where(eq(coupons.id, id));
 
     return SuccessResponse(res, {
-        message: `Coupon ${!existing.isActive ? "activated" : "deactivated"} successfully`,
-        data: { isActive: !existing.isActive }
+        message: `Coupon ${!existingCoupon.isActive ? "activated" : "deactivated"} successfully`,
+        data: { isActive: !existingCoupon.isActive }
     });
 };
 
@@ -213,16 +247,18 @@ export const validateCoupon = async (
 ): Promise<{ discountAmount: number; coupon: typeof coupons.$inferSelect }> => {
     const now = new Date();
 
-    const [coupon] = await db
+    const [rawCoupon] = await db
         .select()
         .from(coupons)
+        .innerJoin(couponRestaurants, eq(coupons.id, couponRestaurants.couponId))
         .where(and(
             eq(coupons.code, couponCode.toUpperCase()),
-            sql`JSON_CONTAINS(${coupons.restaurantId}, ${JSON.stringify(restaurantId)})`
+            eq(couponRestaurants.restaurantId, restaurantId)
         ))
         .limit(1);
 
-    if (!coupon) throw new BadRequest("Invalid coupon code");
+    if (!rawCoupon) throw new BadRequest("Invalid coupon code");
+    const coupon = rawCoupon.coupons;
     if (!coupon.isActive) throw new BadRequest("This coupon is no longer active");
 
     // Date range check
@@ -315,13 +351,14 @@ export const getCouponUsages = async (req: Request, res: Response) => {
     const restaurantId = req.user?.restaurantId || req.user?.id;
     if (!restaurantId) throw new BadRequest("Unauthorized");
 
-    const [coupon] = await db
+    const [rawCoupon] = await db
         .select({ id: coupons.id })
         .from(coupons)
-        .where(and(eq(coupons.id, id), sql`JSON_CONTAINS(${coupons.restaurantId}, ${JSON.stringify(restaurantId)})`))
+        .innerJoin(couponRestaurants, eq(coupons.id, couponRestaurants.couponId))
+        .where(and(eq(coupons.id, id), eq(couponRestaurants.restaurantId, restaurantId)))
         .limit(1);
 
-    if (!coupon) throw new NotFound("Coupon not found");
+    if (!rawCoupon) throw new NotFound("Coupon not found");
 
     const usages = await db
         .select()
