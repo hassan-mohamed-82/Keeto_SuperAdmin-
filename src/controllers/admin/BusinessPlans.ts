@@ -172,3 +172,4 @@ export const getallresstrauntplans = async (req: Request, res: Response) => {
 
     return SuccessResponse(res, { message: "fetched all business plans successfully", data: allPlans });
 };
+
