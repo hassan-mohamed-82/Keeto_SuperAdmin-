@@ -1,11 +1,12 @@
 import { Request, Response } from "express";
 import { db } from "../../models/connection";
-import { restaurantBusinessPlans } from "../../models/schema";
+import {  restaurantBusinessPlans } from "../../models/schema";
 import { eq, and } from "drizzle-orm";
 import { SuccessResponse } from "../../utils/response";
 import { BadRequest } from "../../Errors/BadRequest";
 import { NotFound } from "../../Errors/NotFound";
 import { v4 as uuidv4 } from "uuid";
+import { UnauthorizedError } from "../../Errors";
 
 // ==========================================
 // 1. إضافة خطة عمل لمطعم (Create)
@@ -161,4 +162,13 @@ export const deleteBusinessPlan = async (req: Request, res: Response) => {
     await db.delete(restaurantBusinessPlans).where(eq(restaurantBusinessPlans.id, id));
 
     return SuccessResponse(res, { message: "business plan deleted successfully" });
+};
+
+
+
+export const getallresstrauntplans = async (req: Request, res: Response) => {
+    if (!req.user) throw new UnauthorizedError("Unauthenticated");
+    const allPlans = await db.select().from(restaurantBusinessPlans);
+
+    return SuccessResponse(res, { message: "fetched all business plans successfully", data: allPlans });
 };

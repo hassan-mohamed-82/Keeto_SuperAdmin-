@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteBusinessPlan = exports.updateBusinessPlan = exports.getBusinessPlanById = exports.getBusinessPlansByRestaurant = exports.createBusinessPlan = void 0;
+exports.getallresstrauntplans = exports.deleteBusinessPlan = exports.updateBusinessPlan = exports.getBusinessPlanById = exports.getBusinessPlansByRestaurant = exports.createBusinessPlan = void 0;
 const connection_1 = require("../../models/connection");
 const schema_1 = require("../../models/schema");
 const drizzle_orm_1 = require("drizzle-orm");
@@ -8,6 +8,7 @@ const response_1 = require("../../utils/response");
 const BadRequest_1 = require("../../Errors/BadRequest");
 const NotFound_1 = require("../../Errors/NotFound");
 const uuid_1 = require("uuid");
+const Errors_1 = require("../../Errors");
 // ==========================================
 // 1. إضافة خطة عمل لمطعم (Create)
 // ==========================================
@@ -133,3 +134,10 @@ const deleteBusinessPlan = async (req, res) => {
     return (0, response_1.SuccessResponse)(res, { message: "business plan deleted successfully" });
 };
 exports.deleteBusinessPlan = deleteBusinessPlan;
+const getallresstrauntplans = async (req, res) => {
+    if (!req.user)
+        throw new Errors_1.UnauthorizedError("Unauthenticated");
+    const allPlans = await connection_1.db.select().from(schema_1.restaurantBusinessPlans);
+    return (0, response_1.SuccessResponse)(res, { message: "fetched all business plans successfully", data: allPlans });
+};
+exports.getallresstrauntplans = getallresstrauntplans;
