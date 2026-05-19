@@ -12,7 +12,7 @@ exports.createCategorySchema = zod_1.z.object({
     // الحقول الاختيارية (ليها Default أو Nullable)
     nameAr: zod_1.z.string().max(255).optional(),
     nameFr: zod_1.z.string().max(255).optional(),
-    meta_image: zod_1.z.string().max(500).optional(),
+    // meta_image: z.string().max(500).optional(),
     title: zod_1.z.string().optional(),
     titleAr: zod_1.z.string().optional(),
     titleFr: zod_1.z.string().optional(),
