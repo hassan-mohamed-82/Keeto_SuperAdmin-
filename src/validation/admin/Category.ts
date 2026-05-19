@@ -13,7 +13,7 @@ export const createCategorySchema = z.object({
     nameAr: z.string().max(255).optional(),
     nameFr: z.string().max(255).optional(),
     
-    meta_image: z.string().max(500).optional(),
+    // meta_image: z.string().max(500).optional(),
     
     title: z.string().optional(),
     titleAr: z.string().optional(),
